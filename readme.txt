@@ -100,8 +100,8 @@ Done!
 
 1. From the Import screen you can upload CSV files for import
 3. The Settings screen includes options to alter the default formatting and behaviour of import files
-3. Link CSV columns to Exchange Product fields and review the Import Options
-4. Watch as new Products are populated within your iThemes Exchange store
+3. Link CSV columns to WooCommerce Product fields and review the Import Options
+4. Watch as new Products are populated within your WooCommerce store
 5. A final review report includes skipped Products with reasons and a detailed import log for re-import
 
 == Support ==
