@@ -24,7 +24,7 @@ function woo_pi_product_fields() {
 	$fields[] = array(
 		'name' => 'price',
 		'label' => __( 'Price', 'woo_pi' ),
-		'alias' => array( 'regular_price' )
+		'alias' => array( 'regular_price', 'product_price' )
 	);
 	$fields[] = array(
 		'name' => 'sale_price',
@@ -227,6 +227,7 @@ function woo_pi_is_valid_price( $price = null ) {
 
 }
 
+// Product validation check of required columns.
 function woo_pi_validate_product() {
 
 	global $import, $product;
@@ -265,6 +266,18 @@ function woo_pi_validate_product() {
 		);
 		return true;
 	}
+
+}
+
+function woo_pi_return_product_count() {
+
+	$post_type = 'product';
+	$count = 0;
+	if( $statuses = wp_count_posts( $post_type ) ) {
+		foreach( $statuses as $status )
+			$count = $count + $status;
+	}
+	return $count;
 
 }
 

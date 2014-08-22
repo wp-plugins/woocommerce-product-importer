@@ -31,6 +31,7 @@ function woo_pi_generate_tags() {
 			}
 		}
 		if( !empty( $tags ) ) {
+			// Generate Product Tags if they do not already exist
 			foreach( $tags as $tag ) {
 				$import->log .= "<br />>>> " . sprintf( __( 'Tag: %s', 'woo_pi' ), $tag );
 				if( !term_exists( $tag, $term_taxonomy ) ) {

@@ -3,7 +3,9 @@
 	<li><a href="#csv-settings"><?php _e( 'CSV Settings', 'woo_pi' ); ?></a></li>
 </ul>
 <!-- .subsubsub -->
-<form method="post">
+<br class="clear" />
+
+<form enctype="multipart/form-data" method="post">
 	<table class="form-table">
 		<tbody>
 
@@ -12,7 +14,6 @@
 					<h3><?php _e( 'General Settings', 'woo_pi' ); ?></h3>
 				</td>
 			</tr>
-
 			<tr>
 				<th>
 					<label for="delete_temporary_csv"><?php _e( 'Enable archives', 'woo_pi' ); ?></label>
@@ -25,7 +26,6 @@
 					<p class="description"><?php _e( 'Save uploaded files to the WordPress Media for downloading/re-importing later. By default this option is turned on.', 'woo_pi' ); ?></p>
 				</td>
 			</tr>
-
 			<tr>
 				<th>
 					<label for="encoding"><?php _e( 'Character encoding', 'woo_pi' ); ?></label>
@@ -43,7 +43,6 @@
 <?php } ?>
 				</td>
 			</tr>
-
 <?php if( !ini_get( 'safe_mode' ) ) { ?>
 			<tr>
 				<th>
@@ -60,24 +59,21 @@
 				</td>
 			</tr>
 <?php } ?>
-
 			<tr id="csv-settings">
 				<td colspan="2" style="padding:0;">
 					<hr />
 					<h3><?php _e( 'CSV Settings', 'woo_pi' ); ?></h3>
 				</td>
 			</tr>
-
 			<tr>
 				<th>
 					<label for="delimiter"><?php _e( 'Field delimiter', 'woo_pi' ); ?></label>
 				</th>
 				<td>
 					<input type="text" size="3" id="delimiter" name="delimiter" value="<?php echo $delimiter; ?>" maxlength="1" class="text" />
-					<p class="description"><?php _e( 'The field delimiter is the character separating each cell in your CSV. This is typically the \',\' (comma) character.', 'woo_pc' ); ?></p>
+					<p class="description"><?php _e( 'The field delimiter is the character separating each cell in your CSV. This is typically the \',\' (comma) character.', 'woo_pi' ); ?></p>
 				</td>
 			</tr>
-
 			<tr>
 				<th>
 					<label for="category_separator"><?php _e( 'Category separator', 'woo_pi' ); ?></label>
@@ -87,7 +83,6 @@
 					<p class="description"><?php _e( 'The Product Category separator allows you to assign individual Products to multiple Product Categories/Tags/Images at a time. It is suggested to use the \'|\' (vertical pipe) character between each item. For instance: <code>Clothing|Mens|Shirts</code>.', 'woo_pi' ); ?></p>
 				</td>
 			</tr>
-
 			<tr>
 				<th>
 					<label for="parent_child_delimiter"><?php _e( 'Product Category heirachy delimiter', 'woo_pi' ); ?></label>
@@ -104,4 +99,5 @@
 		<input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e( 'Save Changes', 'woo_pi' ); ?>" />
 	</p>
 	<input type="hidden" name="action" value="save-settings" />
+	<!-- .form-table -->
 </form>

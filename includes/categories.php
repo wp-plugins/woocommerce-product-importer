@@ -48,7 +48,7 @@ function woo_pi_generate_categories() {
 			for( $j = 0; $j < $base_categories_explode_size; $j++ ) {
 				$category = new stdClass;
 				$category->contents = $base_categories_explode;
-				// @mod - Test if encoding makes a difference or not, needs more work
+				// Test if encoding makes a difference or not, needs more work
 				for( $k = 0; $k < count( $category->contents ); $k++ )
 					$category->contents[$k] = iconv( $input_encoding, $output_encoding, mb_convert_encoding( trim( $category->contents[$k] ), "UTF-8" ) );
 				switch( $j ) {
@@ -74,49 +74,6 @@ function woo_pi_generate_categories() {
 							$import->log .= "<br />>>>>>> " . sprintf( __( 'Created Category: %s', 'woo_pi' ), trim( $category->contents[1] ) );
 						else
 							$import->log .= "<br />>>>>>> " . sprintf( __( 'Duplicate of Category detected: %s', 'woo_pi' ), trim( $category->contents[1] ) );
-						break;
-
-					case '2':
-						$import->log .= "<br />>>> " . sprintf( __( 'Category: %s > %s > %s', 'woo_pi' ), trim( $category->contents[0] ), trim( $category->contents[1] ), trim( $category->contents[2] ) );
-						$category->category_root = get_term_by( 'name', htmlspecialchars( trim( $category->contents[0] ) ), $term_taxonomy );
-						$category_parent_sql = $wpdb->prepare( "SELECT terms.`term_id` FROM `" . $wpdb->terms . "` as terms, `" . $wpdb->term_taxonomy . "` as term_taxonomy WHERE terms.`term_id` = term_taxonomy.`term_id` AND term_taxonomy.`parent` = %d AND terms.`name` = %s AND term_taxonomy.`taxonomy` = %s LIMIT 1", $category->category_root->term_id, htmlspecialchars( trim( $category->contents[1] ) ), $term_taxonomy );
-						$category->category_parent = $wpdb->get_var( $category_parent_sql );
-						$wpdb->flush();
-/*
-						// WordPress standards method of accessing term, not working
-						$args = array(
-							'number' => 1,
-							'search' => htmlspecialchars( trim( $category->contents[1] ) ),
-							'child_of' => $category->category_root->term_id
-						);
-						$category->category_parent = get_terms( $term_taxonomy, $args );
-*/
-						if( $category->category_root && $category->category_parent ) {
-							if( !term_exists( trim( $category->contents[2] ), $term_taxonomy, $category->category_parent ) )
-								$term = wp_insert_term( htmlspecialchars( trim( $category->contents[2] ) ), $term_taxonomy, array( 'parent' => $category->category_parent ) );
-						}
-						if( isset( $term ) && $term )
-							$import->log .= "<br />>>>>>> " . sprintf( __( 'Created Category: %s', 'woo_pi' ), trim( $category->contents[2] ) );
-						else
-							$import->log .= "<br />>>>>>> " . sprintf( __( 'Duplicate of Category detected: %s', 'woo_pi' ), trim( $category->contents[2] ) );
-						break;
-
-					case '3':
-						$import->log .= "<br />>>> " . sprintf( __( 'Category: %s > %s > %s > %s', 'woo_pi' ), trim( $category->contents[0] ), trim( $category->contents[1] ), trim( $category->contents[2] ), trim( $category->contents[3] ) );
-						$category->category_root = get_term_by( 'name', htmlspecialchars( trim( $category->contents[0] ) ), $term_taxonomy );
-						$category_parent_sql = $wpdb->prepare( "SELECT terms.`term_id` FROM `" . $wpdb->terms . "` as terms, `" . $wpdb->term_taxonomy . "` as term_taxonomy WHERE terms.`term_id` = term_taxonomy.`term_id` AND term_taxonomy.`parent` = %d AND terms.`name` = %s AND term_taxonomy.`taxonomy` = %s LIMIT 1", $category->category_root->term_id, htmlspecialchars( trim( $category->contents[1] ) ), $term_taxonomy );
-						$category->category_parent = $wpdb->get_var( $category_parent_sql );
-						$category_base_sql = $wpdb->prepare( "SELECT terms.`term_id` FROM `" . $wpdb->terms . "` as terms, `" . $wpdb->term_taxonomy . "` as term_taxonomy WHERE terms.`term_id` = term_taxonomy.`term_id` AND term_taxonomy.`parent` = %d AND terms.`name` = %s AND term_taxonomy.`taxonomy` = '' LIMIT 1", $category->category_parent, htmlspecialchars( trim( $category->contents[2] ) ), $term_taxonomy );
-						$category->category_base = $wpdb->get_var( $category_base_sql );
-						$wpdb->flush();
-						if( $category->category_root && $category->category_parent && $category->category_base ) {
-							if( !term_exists( trim( $category->contents[3] ), $term_taxonomy, $category->category_base ) )
-								$term = wp_insert_term( htmlspecialchars( trim( $category->contents[3] ) ), $term_taxonomy, array( 'parent' => $category->category_base ) );
-						}
-						if( isset( $term ) && $term )
-							$import->log .= "<br />>>>>>> " . sprintf( __( 'Created Category: %s', 'woo_pi' ), trim( $category->contents[3] ) );
-						else
-							$import->log .= "<br />>>>>>> " . sprintf( __( 'Duplicate of Category detected: %s', 'woo_pi' ), trim( $category->contents[3] ) );
 						break;
 
 					default:
@@ -180,43 +137,6 @@ function woo_pi_process_categories() {
 						$wpdb->flush();
 						foreach( $db_categories as $db_category ) {
 							if( $pid_parent->id == $db_category->category_parent ) {
-								if( htmlspecialchars( trim( $pid_categorydata[$k] ) ) == $db_category->name ) {
-									$product->category_term_id[] = $db_category->term_id;
-									break;
-								}
-							}
-						}
-						break;
-
-					case '2':
-						$pid_root_sql = "SELECT terms.`term_id` as id, terms.`name`, term_taxonomy.`parent` as category_parent FROM `" . $wpdb->terms . "` as terms, `" . $wpdb->term_taxonomy . "` as term_taxonomy WHERE terms.`term_id` = term_taxonomy.`term_id` AND terms.`name` = %s LIMIT 1";
-						$pid_root = $wpdb->get_row( $wpdb->prepare( $pid_root_sql, htmlspecialchars( $pid_categorydata[$k-2] ) ) );
-						$wpdb->flush();
-						$pid_parent_sql = $wpdb->prepare( "SELECT terms.`term_id` as id, terms.`name`, term_taxonomy.`parent` as category_parent FROM `" . $wpdb->terms . "` as terms, `" . $wpdb->term_taxonomy . "` as term_taxonomy WHERE terms.`term_id` = term_taxonomy.`term_id` AND terms.`name` = %s AND term_taxonomy.`parent` = %d LIMIT 1", htmlspecialchars( $pid_categorydata[$k-1] ), $pid_root->id );
-						$pid_parent = $wpdb->get_row( $pid_parent_sql );
-						$wpdb->flush();
-						foreach( $db_categories as $db_category ) {
-							if( $pid_parent->id == $db_category->category_parent ) {
-								if( htmlspecialchars( trim( $pid_categorydata[$k] ) ) == $db_category->name ) {
-									$product->category_term_id[] = $db_category->term_id;
-									break;
-								}
-							}
-						}
-						break;
-
-					case '3':
-						$pid_root_sql = "SELECT terms.`term_id` as id, terms.`name`, term_taxonomy.`parent` as category_parent FROM `" . $wpdb->terms . "` as terms, `" . $wpdb->term_taxonomy . "` as term_taxonomy WHERE terms.`term_id` = term_taxonomy.`term_id` AND terms.`name` = %s LIMIT 1";
-						$pid_root = $wpdb->get_row( $wpdb->prepare( $pid_root_sql, htmlspecialchars( $pid_categorydata[$k-3] ) ) );
-						$wpdb->flush();
-						$pid_parent_sql = $wpdb->prepare( "SELECT terms.`term_id` as id, terms.`name`, term_taxonomy.`parent` as category_parent FROM `" . $wpdb->terms . "` as terms, `" . $wpdb->term_taxonomy . "` as term_taxonomy WHERE terms.`term_id` = term_taxonomy.`term_id` AND terms.`name` = %s AND term_taxonomy.`parent` = %d LIMIT 1", htmlspecialchars( $pid_categorydata[$k-2] ), $pid_root->id );
-						$pid_parent = $wpdb->get_row( $pid_parent_sql );
-						$wpdb->flush();
-						$pid_base_sql = $wpdb->prepare( "SELECT terms.`term_id` as id, terms.`name`, term_taxonomy.`parent` as category_parent FROM `" . $wpdb->terms . "` as terms, `" . $wpdb->term_taxonomy . "` as term_taxonomy WHERE terms.`term_id` = term_taxonomy.`term_id` AND terms.`name` = %s AND term_taxonomy.`parent` = %d LIMIT 1", htmlspecialchars( $pid_categorydata[$k-1] ), $pid_parent->id );
-						$pid_base = $wpdb->get_row( $pid_base_sql );
-						$wpdb->flush();
-						foreach( $db_categories as $db_category ) {
-							if( $pid_base->id == $db_category->category_parent ) {
 								if( htmlspecialchars( trim( $pid_categorydata[$k] ) ) == $db_category->name ) {
 									$product->category_term_id[] = $db_category->term_id;
 									break;

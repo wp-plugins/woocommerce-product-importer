@@ -36,7 +36,6 @@ if( is_admin() ) {
 
 	/* Start of: WordPress Administration */
 
-	include_once( WOO_PI_PATH . 'includes/admin.php' );
 
 	// Register Product Importer in the list of available WordPress importers
 	function woo_pi_register_importer() {
@@ -165,10 +164,11 @@ if( is_admin() ) {
 			return;
 		}
 
+		$upload_dir = wp_upload_dir();
 		if( $file ) {
-			$upload_dir = wp_upload_dir();
 			woo_pi_prepare_data();
 			$i = 0;
+			$products = woo_pi_return_product_count();
 			$import->options = woo_pi_product_fields();
 			$import->options_size = count( $import->options );
 			$first_row = array();

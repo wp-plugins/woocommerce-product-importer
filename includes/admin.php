@@ -118,6 +118,7 @@ function woo_pi_enqueue_scripts( $hook ) {
 		// Common
 		wp_enqueue_style( 'woo_pi_styles', plugins_url( '/templates/admin/import.css', WOO_PI_RELPATH ) );
 		wp_enqueue_script( 'woo_pi_scripts', plugins_url( '/templates/admin/import.js', WOO_PI_RELPATH ), array( 'jquery' ) );
+		wp_enqueue_script( 'jquery-toggleblock', plugins_url( '/js/toggleblock.js', WOO_PI_RELPATH ), array( 'jquery' ) );
 
 	}
 
@@ -173,6 +174,14 @@ function woo_pi_tab_template( $tab = '' ) {
 			$file_path_relative = '';
 			if( isset( $_POST['csv_file_path'] ) )
 				$file_path_relative = $_POST['csv_file_path'];
+			$csv_sample_link = 'http://www.visser.com.au/woocommerce/plugins/product-importer-deluxe/#sample-csv';
+			$csv_template_link = 'http://www.visser.com.au/woocommerce/plugins/product-importer-deluxe/#blank-csv';
+
+			if( isset( $_GET['import'] ) && $_GET['import'] == WOO_PD_PREFIX )
+				$url = 'import';
+			if( isset( $_GET['page'] ) && $_GET['page'] == WOO_PD_PREFIX )
+				$url = 'page';
+
 			break;
 
 		case 'settings':

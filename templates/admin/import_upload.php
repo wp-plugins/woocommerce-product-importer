@@ -27,7 +27,11 @@
 						</select>
 					</td>
 					<td class="vertical-align-middle">
+	<?php if( $import->user_locale ) { ?>
 						<code><?php echo utf8_encode( $second_row[$key] ); ?></code>
+	<?php } else { ?>
+						<code><?php echo $second_row[$key]; ?></code>
+	<?php } ?>
 					</td>
 				</tr>
 <?php } ?>
@@ -75,6 +79,7 @@
 			<!-- .postbox -->
 		</div>
 		<!-- #poststuff -->
+		<?php wp_nonce_field( 'update-options' ); ?>
 		<input type="hidden" name="action" value="save" />
 		<input type="hidden" name="delimiter" value="<?php echo $import->delimiter; ?>" />
 		<input type="hidden" name="category_separator" value="<?php echo $import->category_separator; ?>" />

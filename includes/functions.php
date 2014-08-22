@@ -1,6 +1,5 @@
 <?php
 include_once( WOO_PI_PATH . 'includes/products.php' );
-
 include_once( WOO_PI_PATH . 'includes/categories.php' );
 include_once( WOO_PI_PATH . 'includes/tags.php' );
 
@@ -8,11 +7,41 @@ if( is_admin() ) {
 
 	/* Start of: WordPress Administration */
 
+	include_once( WOO_PI_PATH . 'includes/admin.php' );
+
 	function woo_pi_import_init() {
 
 		global $import, $wpdb, $woocommerce;
 
 		$troubleshooting_url = 'http://www.visser.com.au/documentation/product-importer-deluxe/usage/';
+
+		if( ini_get( 'safe_mode' ) && !woo_pi_get_option( 'safe_mode_notice', false ) ) {
+			$message = sprintf( __( 'Your WordPress site appears to be running PHP in \'Safe Mode\', because of this the script timeout cannot be adjusted. This will limit the importing of large catalogues. %s', 'woo_pi' ), '<a href="' . $troubleshooting_url . '" target="_blank">' . __( 'Need help?', 'woo_pi' ) . '</a>' );
+			$dismiss_url = add_query_arg( array( 'page' => 'woo_pi', 'action' => 'dismiss-safe_mode' ), 'admin.php' );
+			$dismiss_link = '<span style="float:right;"><a href="' . $dismiss_url . '">' . __( 'Dismiss', 'woo_pi' ) . '</a></span>';
+			woo_pi_admin_notice( $message . $dismiss_link, 'error' );
+		}
+
+		if( !function_exists( 'mb_convert_encoding' ) && !woo_pi_get_option( 'mb_convert_notice', false ) ) {
+			$message = __( 'The function mb_convert_encoding() requires the mb_strings module to be enabled, multi-lingual import support has been disabled.', 'woo_pi' );
+			$dismiss_url = add_query_arg( array( 'page' => 'woo_pi', 'action' => 'dismiss-mb_convert' ), 'admin.php' );
+			$dismiss_link = '<span style="float:right;"><a href="' . $dismiss_url . '">' . __( 'Dismiss', 'woo_pi' ) . '</a></span>';
+			woo_pi_admin_notice( $message . $dismiss_link, 'error' );
+		}
+
+		if( phpversion() < '5.3.0' && !woo_pi_get_option( 'str_getcsv_notice', false ) ) {
+			$message = sprintf( __( 'Your WordPress site is running an older version of PHP which does not support the function str_getcsv(), a substitute will be used. %s', 'woo_pi' ), '<a href="' . $troubleshooting_url . '" target="_blank">' . __( 'Need help?', 'woo_pi' ) . '</a>' );
+			$dismiss_url = add_query_arg( array( 'page' => 'woo_pi', 'action' => 'dismiss-str_getcsv' ), 'admin.php' );
+			$dismiss_link = '<span style="float:right;"><a href="' . $dismiss_url . '">' . __( 'Dismiss', 'woo_pi' ) . '</a></span>';
+			woo_pi_admin_notice( $message . $dismiss_link, 'error' );
+		}
+
+		if( !ini_get( 'memory_limit' ) && !woo_pi_get_option( 'memory_notice', false ) ) {
+			$message = sprintf( __( 'Your WordPress site does not allow changes to allocated memory limits, because of this memory-related errors are likely. %s', 'woo_pi' ), '<a href="' . $troubleshooting_url . '" target="_blank">' . __( 'Need help?', 'woo_pi' ) . '</a>' );
+			$dismiss_url = add_query_arg( array( 'page' => 'woo_pi', 'action' => 'dismiss-memory' ), 'admin.php' );
+			$dismiss_link = '<span style="float:right;"><a href="' . $dismiss_url . '">' . __( 'Dismiss', 'woo_pi' ) . '</a></span>';
+			woo_pi_admin_notice( $message . $dismiss_link, 'error' );
+		}
 
 		// Notice to increase WordPress memory allocation
 		if( !woo_pi_get_option( 'memory_notice', 0 ) ) {
@@ -47,8 +76,9 @@ if( is_admin() ) {
 		$action = woo_get_action();
 		switch( $action ) {
 
+			// Save changes on Settings screen
 			case 'save-settings':
-				woo_pi_update_option( 'delete_csv', ( isset( $_POST['delete_temporary_csv'] ) ? $_POST['delete_temporary_csv'] : 0 ) );
+				woo_pi_update_option( 'delete_csv', (int)$_POST['delete_temporary_csv'] );
 				woo_pi_update_option( 'encoding', ( isset( $_POST['encoding'] ) ? $_POST['encoding'] : 'UTF-8' ) );
 				woo_pi_update_option( 'timeout', ( isset( $_POST['timeout'] ) ? $_POST['timeout'] : 0 ) );
 				woo_pi_update_option( 'delimiter', ( isset( $_POST['delimiter'] ) ? $_POST['delimiter'] : ',' ) );
@@ -59,14 +89,54 @@ if( is_admin() ) {
 				woo_pi_admin_notice( $message );
 				break;
 
+			// Prompt on Import screen to install exporter
+			case 'dismiss-init':
+				woo_pi_update_option( 'init_notice', true );
+				$url = add_query_arg( 'action', null );
+				wp_redirect( $url );
+				exit();
+				break;
+
+			// Prompt on Import screen when insufficient memory (less than 64M is allocated)
+			case 'dismiss-memory':
+				woo_pi_update_option( 'memory_notice', 1 );
+				$url = add_query_arg( 'action', null );
+				wp_redirect( $url );
+				exit();
+				break;
+
+			// Prompt on Import screen when PHP Safe Mode is detected
+			case 'dismiss-safe_mode':
+				woo_pi_update_option( 'safe_mode_notice', 1 );
+				$url = add_query_arg( 'action', null );
+				wp_redirect( $url );
+				exit();
+				break;
+
+			// Prompt on Import screen when mb_convert() is not available
+			case 'dismiss-mb_convert':
+				woo_pi_update_option( 'mb_convert_notice', 1 );
+				$url = add_query_arg( 'action', null );
+				wp_redirect( $url );
+				exit();
+				break;
+
+			// Prompt on Import screen when str_getcsv() is not available
+			case 'dismiss-str_getcsv':
+				woo_pi_update_option( 'str_getcsv_notice', 1 );
+				$url = add_query_arg( 'action', null );
+				wp_redirect( $url );
+				exit();
+				break;
+
 			default:
-				woo_pi_update_option( 'csv', '' );
 				$import = new stdClass;
 				$import->upload_method = woo_pi_get_option( 'upload_method', 'upload' );
 				$import->delimiter = woo_pi_get_option( 'delimiter', ',' );
 				$import->category_separator = woo_pi_get_option( 'category_separator', '|' );
 				$import->parent_child_delimiter = woo_pi_get_option( 'parent_child_delimiter', '>' );
 				$import->delete_temporary_csv = woo_pi_get_option( 'delete_csv', 0 );
+				$import->user_locale = woo_pi_get_option( 'user_locale', '' );
 				break;
 
 			case 'upload':
@@ -148,7 +218,6 @@ if( is_admin() ) {
 					woo_pi_update_option( 'csv', $upload['file'] );
 					$import->file = $file;
 				}
-
 				break;
 
 			case 'save':
@@ -162,6 +231,7 @@ if( is_admin() ) {
 				$import->category_separator = woo_pi_get_option( 'category_separator', '|' );
 				$import->parent_child_delimiter = woo_pi_get_option( 'parent_child_delimiter', '>' );
 				$import->delete_temporary_csv = woo_pi_get_option( 'delete_csv', 0 );
+				$import->user_locale = woo_pi_get_option( 'user_locale', '' );
 				$import->skip_first = ( isset( $_POST['skip_first'] ) ? $_POST['skip_first'] : false );
 				woo_pi_update_option( 'import_method', ( isset( $_POST['import_method'] ) ? $_POST['import_method'] : 'new' ) );
 				woo_pi_update_option( 'advanced_log', ( isset( $_POST['advanced_log'] ) ? 1 : 0 ) );
@@ -170,7 +240,6 @@ if( is_admin() ) {
 
 				if( !woo_pi_get_option( 'csv' ) ) {
 					$import->cancel_import = true;
-					$troubleshooting_url = 'http://www.visser.com.au/woocommerce/documentation/plugins/product-importer-deluxe/usage/';
 					$message = sprintf( __( 'Your CSV file upload has expired, re-upload it from the opening import screen. %s', 'woo_pi' ), '<a href="' . $troubleshooting_url . '" target="_blank">' . __( 'Need help?', 'woo_pi' ) . '</a>' );
 					woo_pi_admin_notice( $message, 'error' );
 				}
@@ -312,6 +381,8 @@ if( is_admin() ) {
 						$import->i = 0;
 						$import->log .= "<br />>>> " . __( 'Starting import at first CSV row', 'woo_pi' );
 					}
+					$import->failed_products = array();
+
 					$i = $import->i;
 					woo_pi_prepare_product( $i );
 
@@ -576,6 +647,8 @@ function woo_pi_prepare_data() {
 	global $import;
 
 	if( $file = woo_pi_get_option( 'csv' ) ) {
+		$input_encoding = 'ISO-8859-1';
+		$output_encoding = 'ISO-8859-1';
 		ini_set( 'auto_detect_line_endings', true );
 		if( @filesize( $file ) > 0 ) {
 			if( $handle = @fopen( $file, 'r' ) ) {
@@ -599,7 +672,17 @@ function woo_pi_prepare_data() {
 					for( $i = 0; $i < $size; $i++ ) {
 						if( !isset( $data[$i] ) || !is_array( $data[$i] ) )
 							$data[$i] = array();
-						$csv_data[$i] = trim( $csv_data[$i] );
+						if( function_exists( 'mb_convert_encoding' ) ) {
+							// @mod - Character encoding: Method 1, default, needs some work
+							// $csv_data[$i] = mb_convert_encoding( trim( $csv_data[$i] ), 'UTF-8', $output_encoding );
+							$csv_data[$i] = mb_convert_encoding( trim( $csv_data[$i] ), $input_encoding, $output_encoding );
+
+							// @mod - Character encoding: Method 2, alternative, needs some work
+							// $csv_data[$i] = iconv( $input_encoding, $output_encoding, mb_convert_encoding( trim( $csv_data[$i] ), 'UTF-8' ) );
+						} else {
+							// Character encoding: Method 3, fallback
+							$csv_data[$i] = trim( $csv_data[$i] );
+						}
 						array_push( $data[$i], $csv_data[$i] );
 					}
 					unset( $csv_data );
@@ -641,8 +724,10 @@ function woo_pi_encode_transient( $var = null ) {
 	// Check that the Encoding class by Sebastián Grignoli exists
 	if( file_exists( WOO_PI_PATH . 'classes/Encoding.php' ) ) {
 		include_once( WOO_PI_PATH . 'classes/Encoding.php' );
-		$encoding = new Encoding();
-		return $encoding::toUTF8( $var );
+		if( class_exists( 'Encoding' ) ) {
+			$encoding = new Encoding();
+			return $encoding->toUTF8( $var );
+		}
 	} else {
 		return $var;
 	}
@@ -787,6 +872,7 @@ function woo_pi_prepare_columns_filter( $var = null ) {
 
 }
 
+// An early validation check of required columns based on the import method
 function woo_pi_validate_columns( $csv_data ) {
 
 	global $import;

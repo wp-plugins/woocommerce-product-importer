@@ -2,7 +2,7 @@
 
 Contributors: visser
 Donate link: http://www.visser.com.au/#donations
-Tags: e-commerce, shop, cart, woocommerce, product importer, csv
+Tags: e-commerce, shop, cart, woocommerce, product importer, category importer, tag importer, csv
 Requires at least: 2.9.2
 Tested up to: 3.9.1
 Stable tag: 1.1
@@ -17,6 +17,8 @@ See http://www.visser.com.au/woocommerce/plugins/product-importer/
 * Delete existing Products by SKU
 * Update existing Products (**)
 * Import Product images (**)
+* Import Product Categories
+* Import Product Tags
 * Import from CSV file
 * Supports external CRON commands (**)
 
