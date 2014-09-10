@@ -4,7 +4,7 @@ Contributors: visser
 Donate link: http://www.visser.com.au/#donations
 Tags: e-commerce, shop, cart, woocommerce, product importer, category importer, tag importer, csv
 Requires at least: 2.9.2
-Tested up to: 3.9.1
+Tested up to: 4.0
 Stable tag: 1.1
 
 == Description ==
