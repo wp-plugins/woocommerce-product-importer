@@ -8,10 +8,10 @@
 	</div>
 <?php } else { ?>
 	<?php if( $import->products_added ) { ?>
-	<p><?php _e( 'You can manage your Products now by visiting the %s section, to understand why some of your Products were skipped please see below.', 'woo_pi' ); ?></p>
+	<p><?php _e( 'You can manage your Products now by visiting the Products section, to understand why some of your Products were skipped please see below.', 'woo_pi' ); ?></p>
 	<?php } ?>
 	<div class="buttons">
-		<a href="<?php echo add_query_arg( 'post_type', 'product', 'edit.php' ); ?>"Skpip class="button-primary button-separator"><?php _e( 'Manage Products', 'woo_pi' ); ?></a>
+		<a href="<?php echo add_query_arg( 'post_type', 'product', 'edit.php' ); ?>" class="button button-separator"><?php _e( 'Manage Products', 'woo_pi' ); ?></a>
 		<a href="<?php echo add_query_arg( 'page', 'woo_pi', 'admin.php' ); ?>" class="button"><?php _e( 'Import Products', 'woo_pi' ); ?></a>
 	</div>
 	<h4 id="skipped-products"><?php printf( __( 'Skipped Products (%d)', 'woo_pi' ), $import->products_failed ); ?></h4>
@@ -24,7 +24,7 @@
 				<th class="manage-column"><?php _e( 'Product Name', 'woo_pi' ); ?></th>
 				<th class="manage-column"><?php _e( 'Category', 'woo_pi' ); ?></th>
 				<th class="manage-column text-align-right"><?php _e( 'Price', 'woo_pi' ); ?></th>
-				<th class="manage-column"><?php _e( 'Reason', 'woo_pi' ); ?></th>
+				<th class="manage-column" nowrap><?php _e( 'Reason', 'woo_pi' ); ?></th>
 			</tr>
 
 		</thead>
@@ -35,8 +35,8 @@
 				<td><?php echo $failed_product['sku']; ?></td>
 				<td><?php if( strlen( $failed_product['name'] > 50 ) ) { printf( '%s...', substr( $failed_product['name'], 0, 50 ) ); } else { echo $failed_product['name']; } ?></td>
 				<td><?php echo $failed_product['category']; ?>&nbsp;</td>
-				<td class="text-align-right"><?php if( isset( $failed_product['regular_price'] ) ) { ?><?php echo $failed_product['regular_price']; ?><?php } else { echo 'N/A'; } ?></td>
-				<td class="failed-reason">
+				<td class="text-align-right"><?php if( isset( $failed_product['price'] ) ) { ?><?php echo $failed_product['price']; ?><?php } else { echo 'N/A'; } ?></td>
+				<td class="failed-reason" nowrap>
 		<?php if( $failed_product['reason'] ) { ?>
 					<ul>
 			<?php foreach( $failed_product['reason'] as $failed_product_reason ) { ?>

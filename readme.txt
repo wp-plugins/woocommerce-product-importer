@@ -5,22 +5,22 @@ Donate link: http://www.visser.com.au/#donations
 Tags: e-commerce, shop, cart, woocommerce, product importer, category importer, tag importer, csv
 Requires at least: 2.9.2
 Tested up to: 4.0
-Stable tag: 1.1
+Stable tag: 1.2
 
 == Description ==
 
-Import new Products into your WooCommerce store into simple formatted files (e.g. CSV, TXT, etc.).
+Import new Products into your WooCommerce store from simple formatted files (e.g. CSV, TXT, etc.).
 
 See http://www.visser.com.au/woocommerce/plugins/product-importer/
 
 * Import new Products
 * Delete existing Products by SKU
-* Update existing Products (**)
-* Import Product images (**)
+* Update existing Products (*)
+* Import Product Images (*)
 * Import Product Categories
 * Import Product Tags
 * Import from CSV file
-* Supports external CRON commands (**)
+* Supports external CRON commands (*)
 
 Supported Product fields include:
 
@@ -46,36 +46,36 @@ Additional import features will be introduced in regular major Plugin updates, m
 
 Features unlocked in the Pro upgrade of Product Importer include:
 
-* Sale Price Dates From (**)
-* Sale Price Dates To (**)
-* Permalink (**)
-* Image (**)
-* Featured Image (**)
-* Product Gallery (**)
-* Post Date (**)
-* Post Modified (**)
-* Type (**)
-* Visibility (**)
-* Featured (**)
-* Tax Status (**)
-* Tax Class (**)
-* Manage Stock (**)
-* Stock Status (**)
-* Allow Backorders (**)
-* Sold Individually (**)
-* Up-sells (**)
-* Cross-sells (**)
-* File Download (**)
-* Download Limit (**)
-* Product URL (**)
-* Button Text (**)
-* Purchase Note (**)
-* Import All in One SEO Pack (AIOSEOP) (**)
-* Import Advanced Google Product Feed (**)
-* Import Ultimate SEO (**)
-* Import WordPress SEO (**)
+* Sale Price Dates From
+* Sale Price Dates To
+* Permalink
+* Images
+* Featured Image
+* Product Gallery
+* Post Date
+* Post Modified
+* Type
+* Visibility
+* Featured
+* Tax Status
+* Tax Class
+* Manage Stock
+* Stock Status
+* Allow Backorders
+* Sold Individually
+* Up-sells
+* Cross-sells
+* File Download
+* Download Limit
+* Product URL
+* Button Text
+* Purchase Note
+* Import All in One SEO Pack (AIOSEOP)
+* Import Advanced Google Product Feed
+* Import Ultimate SEO
+* Import WordPress SEO
 
-(**) Requries the Pro upgrade to enable additional store export functionality.
+... and more free and Premium extensions for WooCommerce.
 
 For more information visit: http://www.visser.com.au/woocommerce/
 
@@ -113,6 +113,17 @@ If you have any problems, questions or suggestions please raise a support topic 
 http://www.visser.com.au/woocommerce/forums/
 
 == Changelog ==
+
+= 1.2 =
+* Added: WooCommerce Branding support
+* Added: Tools screen
+* Added: Skip import log if generating more than 1000 Categories
+* Added: Skip import log if generating more than 1000 Product Tags
+* Changed: UI of the Import Options meta box on the Import screen
+* Changed: Moved Product related functions to products.php
+* Added: Pause and resume support to import engine
+* Fixed: Display Price in final import report of skipped Products
+* Added: Additional diagnostic/server notices on Import screen
 
 = 1.1 =
 * Added: Alias support for Product import columns

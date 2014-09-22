@@ -10,12 +10,12 @@ function woo_pi_generate_categories() {
 	// Check if Categories is empty
 	if( !empty( $import->csv_category ) ) {
 		// Check if Categories only contains a single header
-		if( $import->skip_first && count( $import->csv_category ) == 1 ) {
+		$size = count( $import->csv_category );
+		if( $import->skip_first && $size == 1 ) {
 			$import->log .= "<br />" . __( 'No Categories were provided', 'woo_pi' );
 			return;
 		}
-		$import->csv_category_size = count( $import->csv_category );
-		for( ; $i < $import->csv_category_size; $i++ ) {
+		for( ; $i < $size; $i++ ) {
 			if( strpos( $import->csv_category[$i], $import->category_separator ) ) {
 				$base_categories_explode = explode( $import->category_separator, $import->csv_category[$i] );
 				$base_categories_explode_size = count( $base_categories_explode );
@@ -32,63 +32,71 @@ function woo_pi_generate_categories() {
 					$base_categories[] = $import->csv_category[$i];
 			}
 		}
+		unset( $size );
 		if( $import->skip_first )
 			$i = 1;
 		else
 			$i = 0;
 		$term_taxonomy = 'product_cat';
-		// @mod - Test if encoding makes a difference or not, needs more work
-		$input_encoding = 'ISO-8859-1';
-		$output_encoding = 'ISO-8859-1';
-		$unique_categories = array();
-		$base_categories_size = count( $base_categories );
-		for( ; $i < $base_categories_size; $i++ ) {
+		$size = count( $base_categories );
+		$include_log = true;
+		if( $size > 1000 ) {
+			$import->log .= "<br />>>> " . __( 'We have just generated so many Product Categories that we couldn\'t actually show you it in real-time', 'woo_pi' );
+			$include_log = false;
+		}
+		for( ; $i < $size; $i++ ) {
 			$base_categories_explode = explode( $import->parent_child_delimiter, $base_categories[$i] );
 			$base_categories_explode_size = count( $base_categories_explode );
 			for( $j = 0; $j < $base_categories_explode_size; $j++ ) {
 				$category = new stdClass;
 				$category->contents = $base_categories_explode;
-				// Test if encoding makes a difference or not, needs more work
-				for( $k = 0; $k < count( $category->contents ); $k++ )
-					$category->contents[$k] = iconv( $input_encoding, $output_encoding, mb_convert_encoding( trim( $category->contents[$k] ), "UTF-8" ) );
 				switch( $j ) {
 
 					case '0':
-						$import->log .= "<br />>>> " . sprintf( __( 'Category: %s', 'woo_pi' ), trim( $category->contents[0] ) );
+						if( $include_log )
+							$import->log .= "<br />>>> " . sprintf( __( 'Category: %s', 'woo_pi' ), trim( $category->contents[0] ) );
 						if( !term_exists( trim( $category->contents[0] ), $term_taxonomy ) )
 							$term = wp_insert_term( htmlspecialchars( trim( $category->contents[0] ) ), $term_taxonomy );
-						if( isset( $term ) && $term )
-							$import->log .= "<br />>>>>>> " . sprintf( __( 'Created Category: %s', 'woo_pi' ), trim( $category->contents[0] ) );
-						else
-							$import->log .= "<br />>>>>>> " . sprintf( __( 'Duplicate of Category detected: %s', 'woo_pi' ), trim( $category->contents[0] ) );
+						if( $include_log ) {
+							if( isset( $term ) && $term )
+								$import->log .= "<br />>>>>>> " . sprintf( __( 'Created Category: %s', 'woo_pi' ), trim( $category->contents[0] ) );
+							else
+								$import->log .= "<br />>>>>>> " . sprintf( __( 'Duplicate of Category detected: %s', 'woo_pi' ), trim( $category->contents[0] ) );
+						}
 						break;
 
 					case '1':
-						$import->log .= "<br />>>> " . sprintf( __( 'Category: %s > %s', 'woo_pi' ), trim( $category->contents[0] ), trim( $category->contents[1] ) );
+						if( $include_log )
+							$import->log .= "<br />>>> " . sprintf( __( 'Category: %s > %s', 'woo_pi' ), trim( $category->contents[0] ), trim( $category->contents[1] ) );
 						$category->category_parent = get_term_by( 'name', trim( $category->contents[0] ), $term_taxonomy );
 						if( $category->category_parent ) {
 							if( !term_exists( trim( $category->contents[1] ), $term_taxonomy, $category->category_parent->term_id ) )
 								$term = wp_insert_term( htmlspecialchars( trim( $category->contents[1] ) ), $term_taxonomy, array( 'parent' => $category->category_parent->term_id ) );
 						}
-						if( isset( $term ) && $term )
-							$import->log .= "<br />>>>>>> " . sprintf( __( 'Created Category: %s', 'woo_pi' ), trim( $category->contents[1] ) );
-						else
-							$import->log .= "<br />>>>>>> " . sprintf( __( 'Duplicate of Category detected: %s', 'woo_pi' ), trim( $category->contents[1] ) );
+						if( $include_log ) {
+							if( isset( $term ) && $term )
+								$import->log .= "<br />>>>>>> " . sprintf( __( 'Created Category: %s', 'woo_pi' ), trim( $category->contents[1] ) );
+							else
+								$import->log .= "<br />>>>>>> " . sprintf( __( 'Duplicate of Category detected: %s', 'woo_pi' ), trim( $category->contents[1] ) );
+						}
 						break;
 
 					default:
 						$skipped_category_size = $j;
-						$import->log .= "<br />>>> " . sprintf( __( 'Category: %s', 'woo_pi' ), trim( $category->contents[$j] ) );
-						for( $k = 0; $k <= $skipped_category_size; $k++ )
-							$import->log .= trim( $category->contents[$k] ) . ' > ';
-						$import->log = substr( $import->log, 0, -3 );
-						$import->log .= "<br />>>>>>> " . sprintf( __( 'Skipped Category: %s', 'woo_pi' ) . trim( $category->contents[$j] ) );
+						if( $include_log ) {
+							$import->log .= "<br />>>> " . sprintf( __( 'Category: %s', 'woo_pi' ), trim( $category->contents[$j] ) );
+							for( $k = 0; $k <= $skipped_category_size; $k++ )
+								$import->log .= trim( $category->contents[$k] ) . ' > ';
+							$import->log = substr( $import->log, 0, -3 );
+							$import->log .= "<br />>>>>>> " . sprintf( __( 'Skipped Category: %s', 'woo_pi' ), trim( $category->contents[$j] ) );
+						}
 						break;
 
 				}
 				unset( $category, $term );
 			}
 		}
+		unset( $size );
 		$import->log .= "<br />" . __( 'Categories have been generated', 'woo_pi' );
 	} else {
 		$import->log .= "<br />" . __( 'No Categories were provided', 'woo_pi' );
@@ -106,9 +114,10 @@ function woo_pi_process_categories() {
 	if( isset( $product->category ) ) {
 		if( strpos( $product->category, $import->category_separator ) ) {
 			$pid_categories_explode = explode( $import->category_separator, $product->category );
-			$pid_categories_explode_size = count( $pid_categories_explode );
-			for( $l = 0; $l < $pid_categories_explode_size; $l++ )
-				$pid_categories[] = $pid_categories_explode[$l];
+			$size = count( $pid_categories_explode );
+			for( $i = 0; $i < $size; $i++ )
+				$pid_categories[] = $pid_categories_explode[$i];
+			unset( $pid_categories_explode, $size );
 		} else {
 			$pid_categories[] = trim( $product->category );
 		}
@@ -132,14 +141,16 @@ function woo_pi_process_categories() {
 						break;
 
 					case '1':
-						$pid_parent_sql = "SELECT terms.`term_id` as id, terms.`name`, term_taxonomy.`parent` as category_parent FROM `" . $wpdb->terms . "` as terms, `" . $wpdb->term_taxonomy . "` as term_taxonomy WHERE terms.`term_id` = term_taxonomy.`term_id` AND terms.`name` = %s LIMIT 1";
-						$pid_parent = $wpdb->get_row( $wpdb->prepare( $pid_parent_sql, htmlspecialchars( $pid_categorydata[$k-1] ) ) );
+						$pid_parent_sql = $wpdb->prepare( "SELECT terms.`term_id` as id, terms.`name`, term_taxonomy.`parent` as category_parent FROM `" . $wpdb->terms . "` as terms, `" . $wpdb->term_taxonomy . "` as term_taxonomy WHERE terms.`term_id` = term_taxonomy.`term_id` AND terms.`name` = %s LIMIT 1", $pid_categorydata[$k-1] );
+						$pid_parent = $wpdb->get_row( $pid_parent_sql );
 						$wpdb->flush();
-						foreach( $db_categories as $db_category ) {
-							if( $pid_parent->id == $db_category->category_parent ) {
-								if( htmlspecialchars( trim( $pid_categorydata[$k] ) ) == $db_category->name ) {
-									$product->category_term_id[] = $db_category->term_id;
-									break;
+						if( $pid_parent !== false ) {
+							foreach( $db_categories as $db_category ) {
+								if( $pid_parent->id == $db_category->category_parent ) {
+									if( htmlspecialchars( trim( $pid_categorydata[$k] ) ) == $db_category->name ) {
+										$product->category_term_id[] = $db_category->term_id;
+										break;
+									}
 								}
 							}
 						}

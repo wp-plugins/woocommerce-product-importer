@@ -17,13 +17,12 @@ function beginImport() {
 		'delimiter'					: ajaxImport.settings.delimiter,
 		'category_separator'				: ajaxImport.settings.category_separator,
 		'parent_child_delimiter'			: ajaxImport.settings.parent_child_delimiter,
-		'delete_temporary_csv'				: ajaxImport.settings.delete_temporary_csv,
+		'delete_file'				: ajaxImport.settings.delete_file,
 		'skip_first'					: ajaxImport.settings.skip_first,
 		'default_weight_unit'				: ajaxImport.settings.default_weight_unit,
 		'default_measurement_unit'			: ajaxImport.settings.default_measurement_unit,
 		'import_method'					: ajaxImport.settings.import_method,
-		'import_images'					: ajaxImport.settings.import_images,
-		'images_method'					: ajaxImport.settings.images_method,
+		'image_method'					: ajaxImport.settings.image_method,
 		'value_name'					: ajaxImport.settings.value_name,
 		'image_width'					: ajaxImport.settings.image_width,
 		'image_height'					: ajaxImport.settings.image_height,
@@ -137,8 +136,8 @@ function finishImport() {
 		importSettings = r;
 		checkForErrors(); if ( errors ) return;
 		updateLog(importSettings.log);
+		$j("#pause-import").fadeOut(200);
 		$j("#progress-bar").removeClass('warning').addClass('success');
-
 		$j('#import-progress .finished-notice').fadeIn(200);
 		$j('#import-progress .finished').fadeIn(200);
 
@@ -185,14 +184,20 @@ function checkForErrors() {
 
 	if ( errors ) {
 		updateLog( '<br /><br />' + errorMessage );
+		$j("#pause-import").fadeOut(200);
 		$j("#progress-bar").removeClass("warning").removeClass("blue").addClass("red");
-		$j('#toggle_log').trigger('click');
-
+		if( $j("#toggle_log").is(':checked') == false )
+			$j('#toggle_log').trigger('click');
+		$j("#reload-resume").slideDown(500);
+		if( importSettings.step == 'save_product' ) {
+			$j('#refresh-btn').hide();
+			$j('#reload-btn').show();
+		}
 		$j("#reload_refresh_step").val(importSettings.step);
 		$j("#reload_progress").val(progress);
-		$j("#reload_total_progress").val(totalProgress);
-		$j("#reload_restart_from").val(i-1);
-		$j("#reload-resume").slideDown(500);
+		$j("#reload_total_progress").val(totalProgress+1);
+		if(i > 0)
+			$j("#reload_restart_from").val(i-1);
 		
 		$j(".ui-progress .ui-label").text( errorMessage );
 	}
@@ -219,6 +224,7 @@ function incrementProgress() {
 $j(function(){
 
 	$j("#progress-bar").addClass('warning');
+	$j("#pause-import").slideDown(500);
 
 	if ( ajaxImport.step == 'save_product' ) {
 		i = ajaxImport.settings.restart_from;
@@ -256,7 +262,14 @@ $j(function(){
 		}
 	});
 
-	$j('.woocommerce_page_woo_pi').delegate('.finished input', 'click', function(){
+	$j('#cancel-btn').click(function(){
+		importSettings.cancel_import = true;
+		importSettings.failed_import = 'Import cancelled';
+		checkForErrors();
+		if ( errors ) clearInterval(productImportInterval);
+	});
+
+	$j('#woo-pi').delegate('.finished input', 'click', function(){
 
 		var data = {
 			'action': 'finish_import',

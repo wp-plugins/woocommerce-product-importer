@@ -1,6 +1,7 @@
 <ul class="subsubsub">
 	<li><a href="#general-settings"><?php _e( 'General Settings', 'woo_pi' ); ?></a> |</li>
-	<li><a href="#csv-settings"><?php _e( 'CSV Settings', 'woo_pi' ); ?></a></li>
+	<li><a href="#csv-settings"><?php _e( 'CSV Settings', 'woo_pi' ); ?></a> |</li>
+	<li><a href="#cron-exports"><?php _e( 'CRON Imports', 'woo_pi' ); ?></a></li>
 </ul>
 <!-- .subsubsub -->
 <br class="clear" />
@@ -9,19 +10,22 @@
 	<table class="form-table">
 		<tbody>
 
+			<?php do_action( 'woo_pi_export_settings_before' ); ?>
+
 			<tr id="general-settings">
 				<td colspan="2" style="padding:0;">
-					<h3><?php _e( 'General Settings', 'woo_pi' ); ?></h3>
+					<h3><div class="dashicons dashicons-admin-settings"></div>&nbsp;<?php _e( 'General Settings', 'woo_pi' ); ?></h3>
+					<p class="description"><?php _e( 'Manage import options across Product Importer from this screen.', 'woo_pi' ); ?></p>
 				</td>
 			</tr>
 			<tr>
 				<th>
-					<label for="delete_temporary_csv"><?php _e( 'Enable archives', 'woo_pi' ); ?></label>
+					<label for="delete_file"><?php _e( 'Enable archives', 'woo_pi' ); ?></label>
 				</th>
 				<td>
-					<select id="delete_temporary_csv" name="delete_temporary_csv">
-						<option value="0"<?php selected( $delete_csv, 0 ); ?>><?php _e( 'Yes', 'woo_pi' ); ?></option>
-						<option value="1"<?php selected( $delete_csv, 1 ); ?>><?php _e( 'No', 'woo_pi' ); ?></option>
+					<select id="delete_file" name="delete_file">
+						<option value="0"<?php selected( $delete_file, 0 ); ?>><?php _e( 'Yes', 'woo_pi' ); ?></option>
+						<option value="1"<?php selected( $delete_file, 1 ); ?>><?php _e( 'No', 'woo_pi' ); ?></option>
 					</select>
 					<p class="description"><?php _e( 'Save uploaded files to the WordPress Media for downloading/re-importing later. By default this option is turned on.', 'woo_pi' ); ?></p>
 				</td>
@@ -59,10 +63,13 @@
 				</td>
 			</tr>
 <?php } ?>
+
+			<?php do_action( 'woo_pi_export_settings_general' ); ?>
+
 			<tr id="csv-settings">
 				<td colspan="2" style="padding:0;">
 					<hr />
-					<h3><?php _e( 'CSV Settings', 'woo_pi' ); ?></h3>
+					<h3><div class="dashicons dashicons-media-spreadsheet"></div>&nbsp;<?php _e( 'CSV Settings', 'woo_pi' ); ?></h3>
 				</td>
 			</tr>
 			<tr>
@@ -93,11 +100,41 @@
 				</td>
 			</tr>
 
+			<tr id="cron-imports">
+				<td colspan="2" style="padding:0;">
+					<hr />
+					<h3><div class="dashicons dashicons-clock"></div>&nbsp;<?php _e( 'CRON Imports', 'woo_pi' ); ?></h3>
+					<p class="description"><?php printf( __( 'Product Importer Deluxe supports importing via a command line request. For sample CRON requests and supported arguments consult our <a href="%s" target="_blank">online documentation</a>.', 'woo_pi' ), $troubleshooting_url ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th>
+					<label for="enable_cron"><?php _e( 'Enable CRON', 'woo_pi' ); ?></label>
+				</th>
+				<td>
+					<select id="enable_cron" name="enable_cron">
+						<option value="1" disabled="disabled"><?php _e( 'Yes', 'woo_pi' ); ?></option>
+						<option value="0" selected="selected"><?php _e( 'No', 'woo_pi' ); ?></option>
+					</select>
+					<p class="description"><?php _e( 'Enabling CRON allows developers to schedule automated imports and connect with Product Importer Deluxe remotely.', 'woo_pi' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th>
+					<label for="secret_key"><?php _e( 'Export secret key', 'woo_pi' ); ?></label>
+				</th>
+				<td>
+					<input name="secret_key" type="text" id="secret_key" value="<?php echo esc_attr( $secret_key ); ?>" class="large-text code" disabled="disabled" /><span class="description"> - <?php printf( __( 'available in %s', 'woo_pi' ), $woo_pd_link ); ?></span>
+					<p class="description"><?php _e( 'This secret key (can be left empty to allow unrestricted access) limits access to authorised developers who provide a matching key when working with Product Importer Deluxe.', 'woo_pi' ); ?></p>
+				</td>
+			</tr>
+
 		</tbody>
 	</table>
+	<!-- .form-table -->
 	<p class="submit">
 		<input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e( 'Save Changes', 'woo_pi' ); ?>" />
 	</p>
 	<input type="hidden" name="action" value="save-settings" />
-	<!-- .form-table -->
 </form>
+<?php do_action( 'woo_pi_export_settings_bottom' ); ?>

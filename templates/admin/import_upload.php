@@ -1,4 +1,5 @@
 <div id="content" class="woo_pi_page_options">
+	<?php woo_pi_total_columns(); ?>
 	<p><?php _e( 'Using the drop down menu match each column in your CSV to a Product detail, then click Upload file and import.', 'woo_pi' ); ?></p>
 	<form enctype="multipart/form-data" method="post" action="<?php echo add_query_arg( 'action', null ); ?>" class="options">
 		<table class="widefat page fixed">
@@ -6,7 +7,7 @@
 				<tr>
 					<th class="manage-column text-align-right"><?php _e( 'First Row', 'woo_pi' ); ?></th>
 					<th class="manage-column column-equals">&nbsp;</th>
-					<th class="manage-column"><?php _e( 'CSV', 'woo_pi' ); ?> -> <?php _e( 'WooCommerce', 'woo_pi' ); ?></th>
+					<th class="manage-column"><?php _e( 'CSV', 'woo_pi' ); ?> &raquo; <?php _e( 'WooCommerce', 'woo_pi' ); ?></th>
 					<th class="manage-column"><?php _e( 'Second Row', 'woo_pi' ); ?> <small>(*)</small></th>
 				</tr>
 			</thead>
@@ -22,16 +23,12 @@
 						<select name="value_name[]">
 							<option></option>
 	<?php foreach( $import->options as $option_key => $option ) { ?>
-							<option value="<?php echo $option['name']; ?>"<?php selected( woo_pi_search_column( $option, woo_pi_format_column( $cell ) ), woo_pi_format_column( $cell ) ); ?>><?php echo $option['label']; ?></option>
+							<option value="<?php echo $option['name']; ?>"<?php selected( woo_pi_search_column( $option, woo_pi_format_column( $cell ) ), woo_pi_format_column( $cell ) ); ?><?php if( isset( $option['disabled'] ) ) { disabled( $option['disabled'], 1 ); } ?>><?php echo $option['label']; ?></option>
 	<?php } ?>
 						</select>
 					</td>
 					<td class="vertical-align-middle">
-	<?php if( $import->user_locale ) { ?>
-						<code><?php echo utf8_encode( $second_row[$key] ); ?></code>
-	<?php } else { ?>
-						<code><?php echo $second_row[$key]; ?></code>
-	<?php } ?>
+						<code><?php echo woo_pi_format_cell_preview( $second_row[$key], $key, $cell ); ?></code>
 					</td>
 				</tr>
 <?php } ?>
@@ -50,23 +47,44 @@
 								<label><input type="checkbox" name="skip_first" class="checkbox"<?php checked( $import->skip_first ); ?> /> <?php _e( 'Skip first row', 'woo_pi' ); ?></label>
 							</td>
 						</tr>
-
 						<tr>
 							<td>
-								<label for="import_method"><?php _e( 'Import Method', 'woo_pi' ); ?></label>
+								<label for="import_method"><strong><?php _e( 'Import method', 'woo_pi' ); ?></strong></label>
 								<div>
-									<p><label><input type="radio" name="import_method" value="new" checked="checked" /><?php _e( 'Import new Products only', 'woo_pi' ); ?></label></p>
-									<p><label><input type="radio" name="import_method" value="delete" checked="checked" /><?php _e( 'Delete matching Products', 'woo_pi' ); ?></label></p>
+									<p><label><input type="radio" name="import_method" value="new"<?php checked( $import->import_method, 'new' ); ?> /><?php _e( 'Import new Products only', 'woo_pi' ); ?></label></p>
+									<p><label><input type="radio" name="import_method" value="delete"<?php disabled( $products, 0 ); ?><?php checked( $import->import_method, 'delete' ); ?> /><?php _e( 'Delete matching Products', 'woo_pi' ); ?></label></p>
 									<p><label><input type="radio" name="import_method" value="merge" disabled="disabled" /><?php _e( 'Import new Products and merge Product changes', 'woo_pi' ); ?><span class="description"> - <?php printf( __( 'available in %s', 'woo_ce' ), $woo_pd_link ); ?></span></label></p>
 									<p><label><input type="radio" name="import_method" value="update" disabled="disabled" /><?php _e( 'Merge Product changes only', 'woo_pi' ); ?><span class="description"> - <?php printf( __( 'available in %s', 'woo_ce' ), $woo_pd_link ); ?></span></label></p>
 								</div>
 								<p class="description"><?php _e( 'Adjust the import method to suit your import needs. Merged Product changes are linked by the SKU.', 'woo_pi' ); ?></p>
 							</td>
 						</tr>
-
 						<tr>
 							<td>
-								<label><input type="checkbox" name="advanced_log"<?php checked( $import->advanced_log ); ?> />&nbsp;<?php _e( 'Advanced Import Reporting', 'woo_pi' ); ?></label>
+								<label for="import_method"><strong><?php _e( 'Image import method', 'woo_pd' ); ?></strong></label>
+								<p>
+									<label>
+										<input type="radio" id="image_method_csv" name="image_method" value="csv" disabled="disabled" /> <?php printf( __( 'Assigned an image column above for Product image filenames in the CSV file, and uploaded the images to: %s', 'woo_pd' ), '<code>' . $import->uploads_directory . '</code>' ); ?><span class="description"> - <?php printf( __( 'available in %s', 'woo_ce' ), $woo_pd_link ); ?></span><br />
+										<span class="description"><?php _e( 'For instance', 'woo_pd' ); ?>: product-1a.jpg<?php echo $import->category_separator; ?>product-1b.jpg<?php echo $import->category_separator; ?>product-1c.jpg</span>
+									</label>
+								</p>
+								<p>
+									<label>
+										<input type="radio" id="image_method_external" name="image_method" value="external" disabled="disabled" /> <?php _e( 'Assigned an external URL column for Products in the CSV file', 'woo_pd' ); ?><span class="description"> - <?php printf( __( 'available in %s', 'woo_ce' ), $woo_pd_link ); ?></span><br />
+										<span class="description"><?php _e( 'For instance', 'woo_pd' ); ?>: http://www.domain.com/images/product-1a.jpg<?php echo $import->category_separator; ?>http://www.domain.com/images/product-1b.jpg<?php echo $import->category_separator; ?>http://www.domain.com/images/product-1c.jpg</span>
+									</label>
+								</p>
+								<hr class="description" />
+								<p>
+									<label>
+										<input type="radio" id="image_method_csv" name="image_method" value="" checked="checked" /> <?php _e( 'I am not uploading Product images', 'woo_pd' ); ?>
+									</label>
+								</p>
+							</td>
+						</tr>
+						<tr>
+							<td>
+								<label><input type="checkbox" name="advanced_log"<?php checked( $import->advanced_log, 1 ); ?> value="1" />&nbsp;<?php _e( 'Advanced import reporting', 'woo_pi' ); ?></label>
 								<p class="description"><?php _e( 'This option will provide a more detailed import log but comes at the expense of a slower import process. Default is off.', 'woo_pi' ); ?></p>
 							</td>
 						</tr>

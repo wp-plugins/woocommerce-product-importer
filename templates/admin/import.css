@@ -1,119 +1,160 @@
 /* Tabbed navigation */
 
-.woocommerce_page_woo_pi h2 .nav-tab {
+#woo-pi h2 .nav-tab {
 	font-size: 16px;
 	margin-right:0;
 }
-.woocommerce_page_woo_pi h2.nav-tab-wrapper {
+#woo-pi h2.nav-tab-wrapper {
 	padding-left:7px;
 }
 
 /* Common */
 
-.woocommerce_page_woo_pi .text-align-center {
+#woo-pi .text-align-center {
 	text-align:center;
 }
-.woocommerce_page_woo_pi .text-align-right {
+#woo-pi .text-align-right {
 	text-align:right;
 }
-.woocommerce_page_woo_pi code {
+#woo-pi code {
 	margin:0;
 	padding:0;
 	background-color:transparent;
 }
-.woocommerce_page_woo_pi .separator {
-	border-bottom:1px solid #dfdfdf;
+#woo-pi .woo_vm_version_table .import_module {
+	background-color:#fff;
+	padding:0.2em 0 0 0.5em;
+}
+#woo-pi .woo_vm_version_table .status {
+	width:80px;
 }
 
 /* Overview */
 
-.woocommerce_page_woo_pi .overview-left {
+#woo-pi .overview-left {
 	float:left;
 	width:73%;
 }
-.woocommerce_page_woo_pi .overview-right {
+#woo-pi .overview-right {
 	float:left;
 	width:24%;
 }
-	.woocommerce_page_woo_pi .overview-right h3 {
+	#woo-pi .overview-right h3 {
 		font-size:16px;
 	}
-		.woocommerce_page_woo_pi .overview-right h3 span {
+		#woo-pi .overview-right h3 span {
 			float:right;
 			font-size:11px;
 			font-weight:normal;
 		}
-	.woocommerce_page_woo_pi .overview-right p {
+	#woo-pi .overview-right p {
 		font-size:12px;
 		color:#333;
 		line-height:1.6em;
 	}
-	.woocommerce_page_woo_pi .overview-right ul {
+	#woo-pi .overview-right ul {
 		font-size:12px;
 		line-height:1.2em;
 	}
 
 /* Upload */
 
-.woocommerce_page_woo_pi .upload-method {
-	display:none;
+#woo-pi #upload-images td form {
+	display: inline;
+}
+#woo-pi #import-products-filters-ftp label {
+	width:100px;
+	display:inline-block;
+}
+#woo-pi .upload-method-last {
+	margin-bottom:1em;
+}
+#woo-pi #upload-csv .separator {
+	border-bottom:1px solid #dfdfdf;
+}
+#woo-pi .woo_vm_version_table .dashicons {
+	color:#666;
+}
+#woo-pi .woo_vm_version_table .status {
+	width:80px;
 }
 
 /* Options */
 
-.woocommerce_page_woo_pi div.woo_pi_page_options table.widefat {
+#woo-pi div.woo_pi_page_options table.widefat {
 	margin:0 0 1em 0;
 }
-.woocommerce_page_woo_pi table.widefat .column-equals {
+#woo-pi table.widefat th.column-row {
+	width:20%;
+}
+#woo-pi table.widefat th.column-equals {
 	width:50px;
 }
 
 /* Save */
 
-.woocommerce_page_woo_pi div#import-progress,
-.woocommerce_page_woo_pi div#upload-images,
-.woocommerce_page_woo_pi div#finish-import {
+#woo-pi div#import-progress,
+#woo-pi div#upload-images,
+#woo-pi div#finish-import {
 	margin:1em 0 0 0;
 }
-	.woocommerce_page_woo_pi div#import-progress .inside,
-	.woocommerce_page_woo_pi div#finish-import .inside {
+	#woo-pi div#import-progress .inside,
+	#woo-pi div#finish-import .inside {
 		margin:1em;
 	}
-.woocommerce_page_woo_pi #installation-controls {
+#woo-pi #installation-controls {
 	width:100%;
+	margin-bottom:1em;
 }
-	.woocommerce_page_woo_pi #installation-controls label {
+	#woo-pi #installation-controls label {
 		font-size:12px;
 	}
-	.woocommerce_page_woo_pi #toggle_installation textarea {
+	#woo-pi #toggle_installation textarea {
 		font:12px Consolas, Monaco, Courier, monospace;
 		width:100%;
 		margin:0.5em 0 0 0;
 	}
-.woocommerce_page_woo_pi .finished input {
-	margin: 1em 0 0 0;
-}
-.woocommerce_page_woo_pi img.pi-loading,
-.woocommerce_page_woo_pi img.pi-fail,
-.woocommerce_page_woo_pi img.pi-success {
+#woo-pi img.pi-loading,
+#woo-pi img.pi-fail,
+#woo-pi img.pi-success {
 	width: 16px;
 	height: 16px;
 	display: inline;
 	vertical-align: bottom;
 	margin: 0 0 3px 5px;
 }
-.woocommerce_page_woo_pi div#finish-import .buttons {
+#woo-pi div#finish-import .buttons {
 	margin:1em 0;
 }
-.woocommerce_page_woo_pi div#finish-import .buttons .button-separator {
+#woo-pi div#finish-import .buttons .button-separator {
 	margin-right:0.2em;
 }
-.woocommerce_page_woo_pi div#finish-import .widefat {
+#woo-pi div#finish-import .widefat {
 	margin:0 0 1em 0;
 }
-.woocommerce_page_woo_pi div#finish-import .widefat td.failed-reason ul {
+#woo-pi div#finish-import .widefat td.failed-reason ul {
 	list-style:inside disc;
 	display:table-cell;
+}
+
+/* Support - Donate / Rate */
+
+#woo-pi .support-donate_rate {
+	display:block;
+	float:right;
+}
+#woo-pi .support-donate_rate p {
+	margin-top:16px;
+}
+#woo-pi .support-donate_rate .star {
+	vertical-align:bottom;
+	display:inline-block;
+	width:17px;
+	height:17px;
+	background:url('images/star.png') no-repeat;
+}
+#woo-pi .support-donate_rate span {
+	display:none;
 }
 
 /* Webkit animation keyframes */
