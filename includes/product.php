@@ -370,18 +370,20 @@ function woo_pi_prepare_product( $count ) {
 	$product = new stdClass;
 
 	// Set up empty vars
-	$product->skipped = false;
+	$product->deleted = false;
+	$product->imported = false;
 	$product->duplicate_exists = false;
 
-	$product->sku = ( isset( $import->csv_sku[$count] ) ? $import->csv_sku[$count] : null );
+	$product->ID = null;
+	$product->sku = ( isset( $import->csv_sku ) && isset( $import->csv_sku[$count] ) ? $import->csv_sku[$count] : null );
 	woo_pi_duplicate_product_exists();
-	$product->name = ( isset( $import->csv_name[$count] ) ? $import->csv_name[$count] : '' );
-	$product->price = ( isset( $import->csv_price[$count] ) ? woo_pi_is_valid_price( $import->csv_price[$count] ) : null );
-	$product->sale_price = ( isset( $import->csv_sale_price[$count] ) ? woo_pi_is_valid_price( $import->csv_sale_price[$count] ) : null );
+	$product->name = ( isset( $import->csv_name ) && isset( $import->csv_name[$count] ) ? $import->csv_name[$count] : null );
+	$product->price = ( isset( $import->csv_price ) && isset( $import->csv_price[$count] ) ? woo_pi_is_valid_price( $import->csv_price[$count] ) : null );
+	$product->sale_price = ( isset( $import->csv_sale_price ) && isset( $import->csv_sale_price[$count] ) ? woo_pi_is_valid_price( $import->csv_sale_price[$count] ) : null );
 	$product->description = ( isset( $import->csv_description[$count] ) ? html_entity_decode( $import->csv_description[$count] ) : null );
 	$product->excerpt = ( isset( $import->csv_excerpt[$count] ) ? html_entity_decode( $import->csv_excerpt[$count] ) : null );
-	$product->category = ( isset( $import->csv_category[$count] ) ? $import->csv_category[$count] : null );
-	$product->tag = ( isset( $import->csv_tag[$count] ) ? $import->csv_tag[$count] : null );
+	$product->category = ( isset( $import->csv_category ) && isset( $import->csv_category[$count] ) ? $import->csv_category[$count] : null );
+	$product->tag = ( isset( $import->csv_tag ) && isset( $import->csv_tag[$count] ) ? $import->csv_tag[$count] : null );
 	$product->weight = ( isset( $import->csv_weight[$count] ) ? $import->csv_weight[$count] : null );
 	$product->length = ( isset( $import->csv_length[$count] ) ? $import->csv_length[$count] : null );
 	$product->width = ( isset( $import->csv_width[$count] ) ? $import->csv_width[$count] : null );
@@ -396,30 +398,52 @@ function woo_pi_prepare_product( $count ) {
 
 	// $product->sample = ( isset( $import->csv_sample[$count] ) ? $import->csv_sample[$count] : null );
 
+	foreach( $product as $key => $value ) {
+		if( !is_array( $value ) && $value !== null )
+			$product->$key = woo_pi_encode_transient( trim( $value ) );
+	}
+
+	if( isset( $import->headers ) ) {
+		foreach( $import->headers as $header ) {
+			if( isset( $import->{'csv_' . $header} ) ) {
+				if( isset( $import->{'csv_' . $header}[$count] ) )
+					unset( $import->{'csv_' . $header}[$count] );
+			}
+		}
+	}
+
 }
 
 function woo_pi_duplicate_product_exists() {
 
 	global $product;
 
-	$product->duplicate_exists = false;
 	// Check for duplicate Product by ID if present
-	if( !empty( $product->ID ) ) {
-		if( get_post_status( $product->ID ) !== false )
+	$post_type = array( 'product', 'product_variation' );
+	if( $product->ID !== null ) {
+		$args = array(
+			'post_type' => $post_type,
+			'post__in' => array( $product->ID ),
+			'numberposts' => 1,
+			'post_status' => 'any',
+			'fields' => 'ids'
+		);
+		$products = new WP_Query( $args );
+		if( !empty( $products->found_posts ) )
 			$product->duplicate_exists = $product->ID;
 	// Check for duplicate Product by SKU if present
-	} else if( !empty( $product->sku ) ) {
-		$post_type = 'product';
+	} else if( $product->sku !== null ) {
 		$meta_key = '_sku';
 		$args = array(
 			'post_type' => $post_type,
 			'meta_key' => $meta_key,
 			'meta_value' => $product->sku,
 			'numberposts' => 1,
+			'post_status' => 'any',
 			'fields' => 'ids'
 		);
 		$products = new WP_Query( $args );
-		if( !empty( $products->posts ) )
+		if( !empty( $products->found_posts ) )
 			$product->duplicate_exists = $products->posts[0];
 		unset( $products );
 	}
@@ -512,35 +536,45 @@ function woo_pi_validate_product() {
 
 	$status = false;
 	$product->fail_requirements = false;
-	if( $import->import_method == 'new' ) {
-		// Create new Product - Requires Name, Categories and no existing Product
-		if( !$product->category_term_id || $product->duplicate_exists )
-			$status = true;
-	} else if( $import->import_method == 'delete' ) {
-		// Delete matching Product - Requires Name or SKU and an existing Product
+	$has_id = ( !empty( $product->ID ) ? true : false );
+	$has_sku = ( !empty( $product->sku ) ? true : false );
+	$has_name = ( !empty( $product->name ) ? true : false );
+	$has_duplicate = ( !empty( $product->duplicate_exists ) ? true : false );
+
+	if( $import->import_method == 'delete' ) {
+		// Delete Product - Requires an existing Product
 		if( !$product->duplicate_exists )
 			$status = true;
+	} else if( $import->import_method == 'new' ) {
+		// Create new Product - Requires either Name or SKU and no existing Product
+		if( ( !$has_name || !$has_sku ) || $has_duplicate ) {
+			$status = true;
+			if( ( $has_name && !$has_sku ) || ( $has_sku && !$has_name ) && !$has_duplicate )
+				$status = false;
+			if( $product->duplicate_exists )
+				$status = true;
+		}
 	}
 	if( $status ) {
 		$import->fail_requirements = true;
 		$product->fail_requirements = true;
 		$failed_reason = array();
-		if( $import->import_method == 'new' ) {
+		if( $import->import_method == 'delete' ) {
+			if( !$product->duplicate_exists )
+				$failed_reason[] = __( 'An existing Product could not be found.', 'woo_pi' );
+		} else {
 			if( $product->duplicate_exists )
 				$failed_reason[] = __( 'A duplicate SKU already exists.', 'woo_pi' );
-			if( !$product->category_term_id )
-				$failed_reason[] = __( 'Could not find a Category by that name.', 'woo_pi' );
-		} else if( $import->import_method == 'delete' ) {
-			if( !$product->duplicate_exists )
-				$failed_reason[] = __( 'No matching Product could be found.', 'woo_pi' );
 		}
 		if( empty( $failed_reason ) )
 			$failed_reason[] = __( 'No specific reason was given, raise this as a Support issue.', 'woo_pi' );
+		$product->failed_reason = $failed_reason[0];
 		$import->failed_products[] = array( 
 			'sku' => $product->sku,
 			'name' => $product->name,
+			'price' => $product->price,
 			'category' => str_replace( $import->category_separator, "<br />", str_replace( $import->parent_child_delimiter, ' &raquo; ', $product->category ) ),
-			'reason' => $failed_reason 
+			'reason' => $failed_reason
 		);
 		return true;
 	}
@@ -577,28 +611,45 @@ function woo_pi_create_product() {
 		'ping_status' => 'closed',
 		'post_type' => $post_type,
 		'post_content' => ( !is_null( $product->description ) ? $product->description : '' ),
-		'post_excerpt' => ( !is_null( $product->excerpt ) ? $product->excerpt : '' )
+		'post_excerpt' => ( !is_null( $product->excerpt ) ? $product->excerpt : '' ),
+		'tax_input' => array(
+			'product_type' => 'simple'
+		)
 	);
 	$product->ID = wp_insert_post( $post_data, true );
 	if( is_wp_error( $product->ID ) !== true ) {
+
 		// Manually refresh the Post GUID
 		$wpdb->update( $wpdb->posts, array(
 			'guid' => sprintf( '%s/?post_type=%s&p=%d', get_bloginfo( 'url' ), $post_type, $product->ID )
 		), array( 'ID' => $product->ID ) );
 
-		woo_pi_create_product_meta_defaults();
-		woo_pi_create_product_meta_details();
+		woo_pi_create_product_defaults();
+		woo_pi_create_product_details();
+		if( function_exists( 'wc_delete_product_transients' ) )
+			wc_delete_product_transients( $product->ID );
 		$import->products_added++;
+		$product->imported = true;
+
 	} else {
-		$errors = $product->ID->get_error_messages();
-		foreach( $errors as $error )
-			$import->log .= "<br />>>>>>> " . $error;
-		$product->skipped = true;
+
+		ob_start();
+		var_dump( $post_data );
+		$output = ob_get_contents();
+		ob_end_clean();
+		error_log( sprintf( __( '[product-importer] Could not save the Product, $post_data: %s | $product: %s', 'woo_pd' ), $output, print_r( $product, true ) ) );
+
+		if( $errors = $product->ID->get_error_messages() ) {
+			foreach( $errors as $error )
+				$product->failed_reason = $error;
+		}
+		$import->products_failed++;
+
 	}
 
 }
 
-function woo_pi_create_product_meta_defaults() {
+function woo_pi_create_product_defaults() {
 
 	global $product;
 
@@ -629,13 +680,15 @@ function woo_pi_create_product_meta_defaults() {
 		'total_sales' => 0
 	);
 	if( $defaults = apply_filters( 'woo_pi_create_product_defaults', $defaults, $product->ID ) ) {
-		foreach( $defaults as $key => $default )
-			update_post_meta( $product->ID, $key, $default );
+		if( WOO_PI_DEBUG !== true ) {
+			foreach( $defaults as $key => $default )
+				update_post_meta( $product->ID, $key, $default );
+		}
 	}
 
 }
 
-function woo_pi_create_product_meta_details() {
+function woo_pi_create_product_details() {
 
 	global $wpdb, $product, $import, $user_ID;
 
@@ -643,7 +696,8 @@ function woo_pi_create_product_meta_details() {
 
 	// Insert SKU
 	if( $product->sku !== null ) {
-		update_post_meta( $product->ID, '_sku', $product->sku );
+		if( WOO_PI_DEBUG !== true )
+			update_post_meta( $product->ID, '_sku', $product->sku );
 		if( $import->advanced_log )
 			$import->log .= "<br />>>>>>> " . sprintf( __( 'Setting SKU: %s', 'woo_pi' ), $product->sku );
 		else
@@ -654,8 +708,10 @@ function woo_pi_create_product_meta_details() {
 
 	// Insert Price
 	if( $product->price !== null ) {
-		update_post_meta( $product->ID, '_regular_price', $product->price );
-		update_post_meta( $product->ID, '_price', $product->price );
+		if( WOO_PI_DEBUG !== true ) {
+			update_post_meta( $product->ID, '_regular_price', $product->price );
+			update_post_meta( $product->ID, '_price', $product->price );
+		}
 		if( $import->advanced_log )
 			$import->log .= "<br />>>>>>> " . sprintf( __( 'Setting Price: %s', 'woo_pi' ), $product->price );
 		else
@@ -666,8 +722,10 @@ function woo_pi_create_product_meta_details() {
 
 	// Insert Sale Price
 	if( $product->sale_price !== null ) {
-		update_post_meta( $product->ID, '_sale_price', $product->sale_price );
-		update_post_meta( $product->ID, '_price', $product->sale_price );
+		if( WOO_PI_DEBUG !== true ) {
+			update_post_meta( $product->ID, '_sale_price', $product->sale_price );
+			update_post_meta( $product->ID, '_price', $product->sale_price );
+		}
 		if( $import->advanced_log )
 			$import->log .= "<br />>>>>>> " . sprintf( __( 'Setting Sale Price: %s', 'woo_pi' ), $product->sale_price );
 		else
@@ -678,7 +736,8 @@ function woo_pi_create_product_meta_details() {
 
 	// Insert Weight
 	if( $product->weight !== null ) {
-		update_post_meta( $product->ID, '_weight', $product->weight );
+		if( WOO_PI_DEBUG !== true )
+			update_post_meta( $product->ID, '_weight', $product->weight );
 		if( $import->advanced_log )
 			$import->log .= "<br />>>>>>> " . sprintf( __( 'Setting Weight: %s', 'woo_pi' ), $product->weight );
 		else
@@ -694,21 +753,24 @@ function woo_pi_create_product_meta_details() {
 		else
 			$import->log .= "<br />>>>>>> " . __( 'Setting Dimensions', 'woo_pi' );
 		if( $product->length !== null ) {
-			update_post_meta( $product->ID, '_length', $product->length );
+			if( WOO_PI_DEBUG !== true )
+				update_post_meta( $product->ID, '_length', $product->length );
 			if( $import->advanced_log )
 				$import->log .= "<br />>>>>>>>>> " . sprintf( __( 'Length: %s%s', 'woo_pi' ), $product->length, $import->default_measurement_unit );
 		} else if( $import->advanced_log ) {
 			$import->log .= "<br />>>>>>>>>> " . __( 'Skipping Length', 'woo_pi' );
 		}
 		if( $product->width !== null ) {
-			update_post_meta( $product->ID, '_width', $product->width );
+			if( WOO_PI_DEBUG !== true )
+				update_post_meta( $product->ID, '_width', $product->width );
 			if( $import->advanced_log )
 				$import->log .= "<br />>>>>>>>>> " . sprintf( __( 'Width: %s%s', 'woo_pi' ), $product->width, $import->default_measurement_unit );
 		} else if( $import->advanced_log ) {
 			$import->log .= "<br />>>>>>>>>> " . __( 'Skipping Width', 'woo_pi' );
 		}
 		if( $product->height !== null ) {
-			update_post_meta( $product->ID, '_height', $product->height );
+			if( WOO_PI_DEBUG !== true )
+				update_post_meta( $product->ID, '_height', $product->height );
 			if( $import->advanced_log )
 				$import->log .= "<br />>>>>>>>>> " . sprintf( __( 'Height: %s%s', 'woo_pi' ), $product->height, $import->default_measurement_unit );
 		} else if( $import->advanced_log ) {
@@ -758,10 +820,13 @@ function woo_pi_create_product_meta_details() {
 
 	// Insert Quantity
 	if( $product->quantity !== null ) {
-		update_post_meta( $product->ID, '_stock', $product->quantity );
+		if( WOO_PI_DEBUG !== true )
+			update_post_meta( $product->ID, '_stock', $product->quantity );
 		// Override that enables Manage Stock if a value is set for Quantity
-		if( !$product->manage_stock )
-			update_post_meta( $product->ID, '_manage_stock', 'yes' );
+		if( !$product->manage_stock ) {
+			if( WOO_PI_DEBUG !== true )
+				update_post_meta( $product->ID, '_manage_stock', 'yes' );
+		}
 		if( $import->advanced_log ) {
 			$import->log .= "<br />>>>>>> " . sprintf( __( 'Setting Quantity: %s', 'woo_pi' ), $product->quantity );
 			if( !$product->manage_stock )
@@ -781,7 +846,10 @@ function woo_pi_create_product_meta_details() {
 			'ID' => $product->ID,
 			'menu_order' => $product->sort
 		);
-		$response = wp_update_post( $post_data, true );
+		if( WOO_PI_DEBUG !== true )
+			$response = wp_update_post( $post_data, true );
+		else
+			$response = true;
 		if( $import->advanced_log )
 			$import->log .= "<br />>>>>>> " . sprintf( __( 'Setting Sort: %s', 'woo_pi' ), $product->sort );
 		else
@@ -807,7 +875,10 @@ function woo_pi_create_product_meta_details() {
 			'ID' => $product->ID,
 			'post_status' => $product->status
 		);
-		$response = wp_update_post( $post_data, true );
+		if( WOO_PI_DEBUG !== true )
+			$response = wp_update_post( $post_data, true );
+		else
+			$response = true;
 		if( $import->advanced_log )
 			$import->log .= "<br />>>>>>> " . sprintf( __( 'Setting Product Status: %s', 'woo_pi' ), $product->status );
 		else
@@ -833,7 +904,10 @@ function woo_pi_create_product_meta_details() {
 			'ID' => $product->ID,
 			'comment_status' => $product->comment_status
 		);
-		$response = wp_update_post( $post_data, true );
+		if( WOO_PI_DEBUG !== true )
+			$response = wp_update_post( $post_data, true );
+		else
+			$response = true;
 		if( $import->advanced_log )
 			$import->log .= "<br />>>>>>> " . sprintf( __( 'Setting Enable Reviews: %s', 'woo_pi' ), $product->comment_status );
 		else
@@ -860,7 +934,8 @@ function woo_pi_create_product_meta_details() {
 	// Insert Sample Product Meta
 /*
 	if( $product->sample !== null ) {
-		update_post_meta( $product->ID, '_sample', $product->sample );
+		if( WOO_PI_DEBUG !== true )
+			update_post_meta( $product->ID, '_sample', $product->sample );
 		if( $import->advanced_log )
 			$import->log .= "<br />>>>>>> " . sprintf( __( 'Setting Sample Product Meta: %s', 'woo_pi' ), $product->sample );
 		else
@@ -877,10 +952,14 @@ function woo_pi_delete_product() {
 	global $import, $product;
 
 	$response = wp_delete_post( $product->duplicate_exists, true );
-	if( $response )
+	if( $response !== false ) {
+		if( function_exists( 'wc_delete_product_transients' ) )
+			wc_delete_product_transients( $product->duplicate_exists );
 		$import->products_deleted++;
-	else
+		$product->deleted = true;
+	} else {
 		$import->products_failed++;
+	}
 
 }
 ?>

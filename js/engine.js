@@ -10,25 +10,25 @@ var totalProgress = 0;
 function beginImport() {
 
 	var data = {
-		'action'					: 'product_importer',
-		'step'						: ajaxImport.step,
-		'log'						: ajaxImport.settings.log,
-		'advanced_log'					: ajaxImport.settings.advanced_log,
-		'delimiter'					: ajaxImport.settings.delimiter,
-		'category_separator'				: ajaxImport.settings.category_separator,
-		'parent_child_delimiter'			: ajaxImport.settings.parent_child_delimiter,
-		'delete_file'				: ajaxImport.settings.delete_file,
-		'skip_first'					: ajaxImport.settings.skip_first,
-		'default_weight_unit'				: ajaxImport.settings.default_weight_unit,
-		'default_measurement_unit'			: ajaxImport.settings.default_measurement_unit,
-		'import_method'					: ajaxImport.settings.import_method,
-		'image_method'					: ajaxImport.settings.image_method,
-		'value_name'					: ajaxImport.settings.value_name,
-		'image_width'					: ajaxImport.settings.image_width,
-		'image_height'					: ajaxImport.settings.image_height,
-		'timeout'					: ajaxImport.settings.timeout,
-		'cancel_import'					: ajaxImport.settings.cancel_import,
-		'failed_import'					: ajaxImport.settings.failed_import
+		'action' : 'product_importer',
+		'step' : ajaxImport.step,
+		'log' : ajaxImport.settings.log,
+		'advanced_log' : ajaxImport.settings.advanced_log,
+		'delimiter' : ajaxImport.settings.delimiter,
+		'category_separator' : ajaxImport.settings.category_separator,
+		'parent_child_delimiter' : ajaxImport.settings.parent_child_delimiter,
+		'delete_file' : ajaxImport.settings.delete_file,
+		'skip_first' : ajaxImport.settings.skip_first,
+		'default_weight_unit' : ajaxImport.settings.default_weight_unit,
+		'default_measurement_unit' : ajaxImport.settings.default_measurement_unit,
+		'import_method' : ajaxImport.settings.import_method,
+		'image_method' : ajaxImport.settings.image_method,
+		'value_name' : ajaxImport.settings.value_name,
+		'image_width' : ajaxImport.settings.image_width,
+		'image_height' : ajaxImport.settings.image_height,
+		'timeout' : ajaxImport.settings.timeout,
+		'cancel_import' : ajaxImport.settings.cancel_import,
+		'failed_import' : ajaxImport.settings.failed_import
 	}
 
 	$j.post(ajaxImport.ajaxurl, data, function(r){
@@ -116,6 +116,7 @@ function importProduct() {
 				finishImport();
 			}
 			isImporting = false;
+
 		});
 	}
 
@@ -183,6 +184,7 @@ function checkForErrors() {
 	}
 
 	if ( errors ) {
+		updateLog( importSettings.log );
 		updateLog( '<br /><br />' + errorMessage );
 		$j("#pause-import").fadeOut(200);
 		$j("#progress-bar").removeClass("warning").removeClass("blue").addClass("red");
@@ -199,7 +201,7 @@ function checkForErrors() {
 		if(i > 0)
 			$j("#reload_restart_from").val(i-1);
 		
-		$j(".ui-progress .ui-label").text( errorMessage );
+		$j(".ui-progress .ui-label").text( importSettings.loading_text );
 	}
 
 }
@@ -284,6 +286,7 @@ $j(function(){
 
 			loading.fadeOut(500);
 			if ( r.next == 'upload-images' ) {
+
 				$j('#upload-images').html(r.html);
 				$j('#upload-images').show(500);
 				$j('#import-progress').hide(500);

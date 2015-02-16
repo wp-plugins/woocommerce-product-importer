@@ -8,7 +8,7 @@
 
 <p><strong><?php _e( 'G\'day, mate! Upload your Product spreadsheet - formatted as a CSV file - and we\'ll import your Products into WooCommerce.', 'woo_pi' ); ?></strong></p>
 <p><?php printf( __( 'To help you get started, you can download the latest %s and %s any time from the Plugin detail page on our website.', 'woo_pi' ), '<a href="' . $csv_sample_link . '" target="_blank">' . __( 'sample CSV\'s', 'woo_pi' ) . '</a>', '<a href=" ' . $csv_template_link . '" target="_blank">' . __( 'CSV templates', 'woo_pi' ) . '</a>' ); ?></p>
-<form enctype="multipart/form-data" method="post" id="upload_form">
+<form id="upload_form" enctype="multipart/form-data" method="post">
 	<div id="poststuff">
 
 		<?php do_action( 'woo_pi_before_upload' ); ?>

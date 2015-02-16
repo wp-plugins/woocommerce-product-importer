@@ -1,7 +1,7 @@
 <?php
-include_once( WOO_PI_PATH . 'includes/products.php' );
-include_once( WOO_PI_PATH . 'includes/categories.php' );
-include_once( WOO_PI_PATH . 'includes/tags.php' );
+include_once( WOO_PI_PATH . 'includes/product.php' );
+include_once( WOO_PI_PATH . 'includes/category.php' );
+include_once( WOO_PI_PATH . 'includes/tag.php' );
 
 if( is_admin() ) {
 
@@ -34,6 +34,7 @@ if( is_admin() ) {
 			}
 		}
 
+		// Notice that PHP safe mode is active
 		if( ini_get( 'safe_mode' ) && !woo_pi_get_option( 'safe_mode_notice', false ) ) {
 			$message = sprintf( __( 'Your WordPress site appears to be running PHP in \'Safe Mode\', because of this the script timeout cannot be adjusted. This will limit the importing of large catalogues. %s', 'woo_pi' ), '<a href="' . $troubleshooting_url . '" target="_blank">' . __( 'Need help?', 'woo_pi' ) . '</a>' );
 			$dismiss_url = add_query_arg( array( 'page' => 'woo_pi', 'action' => 'dismiss-safe_mode' ), 'admin.php' );
@@ -43,8 +44,16 @@ if( is_admin() ) {
 
 		// Notice that mb_convert_encoding() does not exist
 		if( !function_exists( 'mb_convert_encoding' ) && !woo_pi_get_option( 'mb_convert_notice', false ) ) {
-			$message = __( 'The function mb_convert_encoding() requires the mb_strings module to be enabled, multi-lingual import support has been disabled.', 'woo_pi' );
+			$message = sprintf( __( 'The function mb_convert_encoding() requires the mb_strings extension to be enabled, multi-lingual import support has been disabled. %s', 'woo_pi' ), '<a href="' . $troubleshooting_url . '" target="_blank">' . __( 'Need help?', 'woo_pi' ) . '</a>' );
 			$dismiss_url = add_query_arg( array( 'page' => 'woo_pi', 'action' => 'dismiss-mb_convert' ), 'admin.php' );
+			$dismiss_link = '<span style="float:right;"><a href="' . $dismiss_url . '">' . __( 'Dismiss', 'woo_pi' ) . '</a></span>';
+			woo_pi_admin_notice( $message . $dismiss_link, 'error' );
+		}
+
+		// Notice that mb_list_encodings() does not exist
+		if( !function_exists( 'mb_list_encodings' ) && !woo_pi_get_option( 'mb_list_notice', false ) ) {
+			$message = sprintf( __( 'The function mb_list_encodings() requires the mb_strings extension to be enabled, if you are importing non-English and/or special characters the WordPress Transients we use during import will be corrupted and cause the import to fail.', 'woo_pi' ), '<a href="' . $troubleshooting_url . '" target="_blank">' . __( 'Need help?', 'woo_pi' ) . '</a>' );
+			$dismiss_url = add_query_arg( array( 'page' => 'woo_pi', 'action' => 'dismiss-mb_list' ), 'admin.php' );
 			$dismiss_link = '<span style="float:right;"><a href="' . $dismiss_url . '">' . __( 'Dismiss', 'woo_pi' ) . '</a></span>';
 			woo_pi_admin_notice( $message . $dismiss_link, 'error' );
 		}
@@ -84,7 +93,7 @@ if( is_admin() ) {
 
 			// Save changes on Settings screen
 			case 'save-settings':
-				woo_pi_update_option( 'delete_file', ( isset( $_POST['delete_file'] ) ? absint( (int)$_POST['delete_file'] ) : 0 ) );
+				woo_pi_update_option( 'delete_file', ( isset( $_POST['delete_file'] ) ? absint( $_POST['delete_file'] ) : 0 ) );
 				woo_pi_update_option( 'encoding', ( isset( $_POST['encoding'] ) ? sanitize_text_field( $_POST['encoding'] ) : 'UTF-8' ) );
 				woo_pi_update_option( 'timeout', ( isset( $_POST['timeout'] ) ? absint( $_POST['timeout'] ) : 0 ) );
 				woo_pi_update_option( 'delimiter', ( isset( $_POST['delimiter'] ) ? sanitize_text_field( $_POST['delimiter'] ) : ',' ) );
@@ -99,6 +108,10 @@ if( is_admin() ) {
 				$import = new stdClass;
 				$import->upload_method = woo_pi_get_option( 'upload_method', 'upload' );
 				$import->delimiter = woo_pi_get_option( 'delimiter', ',' );
+				if( $import->delimiter == "\t" )
+					$import->delimiter = 'TAB';
+				if( $import->delimiter == '' || $import->delimiter == false )
+					$import->delimiter = ',';
 				$import->category_separator = woo_pi_get_option( 'category_separator', '|' );
 				$import->parent_child_delimiter = woo_pi_get_option( 'parent_child_delimiter', '>' );
 				$import->delete_file = woo_pi_get_option( 'delete_file', 0 );
@@ -110,17 +123,21 @@ if( is_admin() ) {
 				$import->cancel_import = false;
 				$import->skip_first = false;
 				$import->upload_method = ( isset( $_POST['upload_method'] ) ? $_POST['upload_method'] : 'upload' );
-				$import->import_method = woo_pi_get_option( 'import_method', 'new' );
-				$import->advanced_log = woo_pi_get_option( 'advanced_log', 1 );
-				$import->delimiter = ( isset( $_POST['delimiter'] ) ? $_POST['delimiter'] : ',' );
-				$import->category_separator = ( isset( $_POST['category_separator'] ) ? $_POST['category_separator'] : '|' );
-				$import->parent_child_delimiter = ( isset( $_POST['parent_child_delimiter'] ) ? $_POST['parent_child_delimiter'] : '>' );
-				$import->delete_file = woo_pi_get_option( 'delete_file', 0 );
-				$import->timeout = woo_pi_get_option( 'timeout', 600 );
+				$import->import_method = sanitize_text_field( woo_pi_get_option( 'import_method', 'new' ) );
+				$import->advanced_log = absint( woo_pi_get_option( 'advanced_log', 1 ) );
+				$import->delimiter = ( isset( $_POST['delimiter'] ) ? substr( $_POST['delimiter'], 0, 3 ) : ',' );
+				if( $import->delimiter == 'TAB' )
+					$import->delimiter = "\t";
+				$import->category_separator = ( isset( $_POST['category_separator'] ) ? sanitize_text_field( $_POST['category_separator'] ) : '|' );
+				$import->parent_child_delimiter = ( isset( $_POST['parent_child_delimiter'] ) ? sanitize_text_field( $_POST['parent_child_delimiter'] ) : '>' );
+				$import->delete_file = absint( woo_pi_get_option( 'delete_file', 0 ) );
+				$import->encoding = ( isset( $_POST['encoding'] ) ? sanitize_text_field( $_POST['encoding'] ) : 'UTF-8' );
+				$import->timeout = absint( woo_pi_get_option( 'timeout', 600 ) );
 				$import->upload_mb = wp_max_upload_size();
 				woo_pi_update_option( 'delimiter', $import->delimiter );
 				woo_pi_update_option( 'category_separator', $import->category_separator );
 				woo_pi_update_option( 'parent_child_delimiter', $import->parent_child_delimiter );
+				woo_pi_update_option( 'encoding', $import->encoding );
 
 				// Capture the CSV file uploaded
 				if( $_FILES['csv_file']['error'] == 0 ) {
@@ -168,21 +185,29 @@ if( is_admin() ) {
 					$message = sprintf( __( 'The file you\'re importing exceeded the maximum allowed filesize (see Maximum size), increase the file upload limit or import a smaller CSV file. <a href="%s" target="_blank">Need help?</a>', 'woo_pi' ), $troubleshooting_url );
 					woo_pi_admin_notice( $message, 'error' );
 				}
+				// Check if the delimiter is set
 				if( $import->delimiter == '' || $import->category_separator == '' ) {
 					$import->cancel_import = true;
 					$message = sprintf( __( 'You cannot leave the Field delimiter or Product Category separator options under Import Options empty. <a href="%s" target="_blank">Need help?</a>', 'woo_pi' ), $troubleshooting_url );
 					woo_pi_admin_notice( $message, 'error' );
 				}
 
-				if( !$import->cancel_import ) {
+				if( $import->cancel_import )
+					continue;
+
+				if( in_array( $import->upload_method, array( 'upload' ) ) ) {
 					$upload = wp_upload_bits( $file['name'], null, file_get_contents( $file['tmp_name'] ) );
 					// Fail import if WordPress cannot save the uploaded CSV file
 					if( $upload['error'] ) {
 						$import->cancel_import = true;
-						$message = sprintf( __( 'There was an error while uploading your CSV file, \'%s\'. %s', 'woo_pi' ), $upload['error'], '<a href="' . $troubleshooting_url . '" target="_blank">' . __( 'Need help?', 'woo_pi' ) . '</a>' );
+						$message = sprintf( __( 'There was an error while uploading your CSV file, <em>%s</em>. %s', 'woo_pi' ), $upload['error'], '<a href="' . $troubleshooting_url . '" target="_blank">' . __( 'Need help?', 'woo_pi' ) . '</a>' );
 						woo_pi_admin_notice( $message, 'error' );
 					}
-					woo_pi_update_option( 'csv', $upload['file'] );
+					if( !$import->cancel_import ) {
+						$import->file = $file;
+						woo_pi_update_option( 'csv', $upload['file'] );
+					}
+				} else {
 					$import->file = $file;
 				}
 				break;
@@ -203,10 +228,11 @@ if( is_admin() ) {
 				$import->import_method = ( isset( $_POST['import_method'] ) ? $_POST['import_method'] : 'new' );
 				$import->advanced_log = ( isset( $_POST['advanced_log'] ) ? 1 : 0 );
 				woo_pi_update_option( 'import_method', $import->import_method );
-				woo_pi_update_option( 'advanced_log', (int)$import->advanced_log );
+				woo_pi_update_option( 'advanced_log', absint( $import->advanced_log ) );
 				if( isset( $_POST['timeout'] ) )
-					woo_pi_update_option( 'timeout', $_POST['timeout'] );
+					woo_pi_update_option( 'timeout', sanitize_text_field( $_POST['timeout'] ) );
 
+				// Check if our import has expired
 				if( !woo_pi_get_option( 'csv' ) ) {
 					$import->cancel_import = true;
 					$message = sprintf( __( 'Your CSV file upload has expired, re-upload it from the opening import screen. %s', 'woo_pi' ), '<a href="' . $troubleshooting_url . '" target="_blank">' . __( 'Need help?', 'woo_pi' ) . '</a>' );
@@ -214,24 +240,27 @@ if( is_admin() ) {
 				}
 
 				if( $import->cancel_import )
-					continue;
+					return;
 
 				// Check if this is a resumed import
 				if ( isset( $_POST['refresh_step'] ) ) {
 					$step = sanitize_text_field( $_POST['refresh_step'] );
 					$transient = get_transient( WOO_PI_PREFIX . '_import' );
-					$transient->log = '<br /><br />' . __( 'Resuming import...', 'woo_pd' );
+					$transient->log = '<br /><br />' . __( 'Resuming import...', 'woo_pi' );
 					if( sanitize_text_field( $_POST['import_method'] ) == 'new' )
-						$transient->log .= "<br /><br />" . __( 'Generating Products...', 'woo_pd' );
+						$transient->log .= "<br /><br />" . __( 'Generating Products...', 'woo_pi' );
 					$settings = array(
 						'skip_first' => $transient->skip_first,
 						'import_method' => ( isset( $_POST['import_method'] ) ? sanitize_text_field( $_POST['import_method'] ) : 'new' ),
 						'restart_from' => ( isset( $_POST['restart_from'] ) ? absint( (int)$_POST['restart_from'] ) : 0 ),
 						'progress' => ( isset( $_POST['progress'] ) ? absint( $_POST['progress'] ) : 0 ),
 						'total_progress' => ( isset( $_POST['total_progress'] ) ? absint( $_POST['total_progress'] ) : 0 ),
-						'log' => __( 'Resuming import...', 'woo_pd' )
+						'log' => __( 'Resuming import...', 'woo_pi' )
 					);
-					set_transient( WOO_PI_PREFIX . '_import', $transient );
+					$response = set_transient( WOO_PI_PREFIX . '_import', $transient );
+					// Check if the Transient was saved
+					if( is_wp_error( $response ) )
+						error_log( '[product-importer] Could not save the resume import Transient', 'woo_pi' );
 					unset( $transient );
 				} else {
 					$step = 'prepare_data';
@@ -286,12 +315,13 @@ if( is_admin() ) {
 					if( isset( $import->headers ) ) {
 						$args = array(
 							'generate_categories',
+							'generate_tags',
 							'prepare_product_import',
 							'save_product'
 						);
 						foreach( $import->headers as $header ) {
-							// Exclude $import->csv_category for most of the import
-							if( $header == 'category' ) {
+							// Exclude $import->csv_category and $import->csv_brand for most of the import
+							if( in_array( $header, array( 'category', 'brand' ) ) ) {
 								if( in_array( $_POST['step'], $args ) )
 									$import->{'csv_' . $header} = get_transient( WOO_PI_PREFIX . '_csv_' . $header );
 							} else {
@@ -346,7 +376,7 @@ if( is_admin() ) {
 					$import->products_deleted = 0;
 					$import->products_failed = 0;
 					// Category generation
-					if( in_array( $import->import_method, array( 'new', 'merge', 'update' ) ) && isset( $import->csv_category ) )
+					if( in_array( $import->import_method, array( 'new' ) ) && isset( $import->csv_category ) )
 						woo_pi_generate_categories();
 					else
 						$import->log .= "<br />" . __( 'Categories skipped', 'woo_pi' );
@@ -356,7 +386,7 @@ if( is_admin() ) {
 
 				case 'generate_tags':
 					// Tag generation
-					if( in_array( $import->import_method, array( 'new', 'merge', 'update' ) ) && isset( $import->csv_tag ) )
+					if( in_array( $import->import_method, array( 'new' ) ) && isset( $import->csv_tag ) )
 						woo_pi_generate_tags();
 					else
 						$import->log .= "<br />" . __( 'Tags skipped', 'woo_pi' );
@@ -387,18 +417,19 @@ if( is_admin() ) {
 
 					// This runs once as part of the import preparation
 					$import->active_product = $product;
-					if( $import->import_method == 'new' ) {
-						if( !empty( $product->name ) )
-							$import->log .= "<br />>>> " . sprintf( __( 'Importing %s...', 'woo_pi' ), $product->name );
-						else
-							$import->log .= "<br />>>> " . sprintf( __( 'Importing (no title) - SKU: %s...', 'woo_pi' ), $product->sku );
-					} else if( $import->import_method == 'delete' ) {
+					if( $import->import_method == 'delete' ) {
 						if( !empty( $product->name ) )
 							$import->log .= "<br />>>> " . sprintf( __( 'Searching for %s...', 'woo_pi' ), $product->name );
 						else
 							$import->log .= "<br />>>> " . sprintf( __( 'Searching for (no title) - SKU: %s...', 'woo_pi' ), $product->sku );
+						$import->loading_text = sprintf( __( 'Searching for Product %d of %d...', 'woo_pi' ), $i, ( $import->skip_first ? $import->rows - 1 : $import->rows ) );
+					} else {
+						if( !empty( $product->name ) )
+							$import->log .= "<br />>>> " . sprintf( __( 'Importing %s...', 'woo_pi' ), $product->name );
+						else
+							$import->log .= "<br />>>> " . sprintf( __( 'Importing (no title) - SKU: %s...', 'woo_pi' ), $product->sku );
+						$import->loading_text = sprintf( __( 'Importing Product %d of %d...', 'woo_pi' ), $i, ( $import->skip_first ? $import->rows - 1 : $import->rows ) );
 					}
-					$import->loading_text = sprintf( __( 'Importing Product %1$d of %2$d...', 'woo_pi' ), $i, ( $import->skip_first ? $import->rows - 1 : $import->rows ) );
 					break;
 
 				case 'save_product':
@@ -416,7 +447,7 @@ if( is_admin() ) {
 
 					$import->product_start_time = microtime( true );
 
-					if( in_array( $import->import_method, array( 'new', 'merge', 'update' ) ) ) {
+					if( in_array( $import->import_method, array( 'new' ) ) ) {
 						// Build Categories
 						woo_pi_process_categories();
 
@@ -432,35 +463,44 @@ if( is_admin() ) {
 					if( $product->fail_requirements ) {
 
 						if( $import->advanced_log )
-							$import->log .= "<br />>>>>>> " . __( 'Skipping Product, see Import Report for more information', 'woo_pi' );
+							$import->log .= "<br />>>>>>> " . sprintf( __( 'Skipping Product, see Import Report for full explanation. Reason: %s', 'woo_pi' ), $product->failed_reason );
 						else
-							$import->log .= "<br />>>>>>> " . __( 'Skipping Product', 'woo_pi' );
+							$import->log .= "<br />>>>>>> " . sprintf( __( 'Skipping Product, reason: %s', 'woo_pi' ), $product->failed_reason );
 						$import->products_failed++;
 
 					} else {
 
 						if( $import->import_method == 'delete' && $product->duplicate_exists )
 							woo_pi_delete_product();
-						else if( $import->import_method == 'new' && !$product->duplicate_exists )
+						else if( in_array( $import->import_method, array( 'new' ) ) && !$product->duplicate_exists )
 							woo_pi_create_product();
 
-						if( $product->skipped ) {
-							if( $import->advanced_log )
-								$import->log .= "<br />>>>>>> " . __( 'Skipping Product, see Import Report for more information', 'woo_pi' );
-							else
-								$import->log .= "<br />>>>>>> " . __( 'Skipping Product', 'woo_pi' );
-							$import->products_failed++;
-						} else {
-							if( $import->import_method == 'new' ) {
-								if( !empty( $product->name ) )
-									$import->log .= "<br />>>>>>> " . sprintf( __( '%s successfully imported', 'woo_pi' ), $product->name );
-								else
-									$import->log .= "<br />>>>>>> " . sprintf( __( '(no title) - SKU: %s successfully imported', 'woo_pi' ), $product->sku );
-							} else if( $import->import_method == 'delete' ) {
+
+						if( $import->import_method == 'delete' ) {
+							if( $product->deleted ) {
 								if( !empty( $product->name ) )
 									$import->log .= "<br />>>>>>> " . sprintf( __( '%s successfully deleted', 'woo_pi' ), $product->name );
 								else
 									$import->log .= "<br />>>>>>> " . sprintf( __( '(no title) - SKU: %s successfully deleted', 'woo_pi' ), $product->sku );
+							} else {
+								if( $import->advanced_log )
+									$import->log .= "<br />>>>>>> " . sprintf( __( 'Skipping Product, see Import Report for full explanation. Reason: %s', 'woo_pi' ), $product->failed_reason );
+								else
+									$import->log .= "<br />>>>>>> " . sprintf( __( 'Skipping Product, reason: %s', 'woo_pi' ), $product->failed_reason );
+							}
+						} else {
+							if( $product->imported ) {
+								if( $import->import_method == 'new' ) {
+									if( !empty( $product->name ) )
+										$import->log .= "<br />>>>>>> " . sprintf( __( '%s successfully imported', 'woo_pi' ), $product->name );
+									else
+										$import->log .= "<br />>>>>>> " . sprintf( __( '(no title) - SKU: %s successfully imported', 'woo_pi' ), $product->sku );
+								}
+							} else {
+								if( $import->advanced_log )
+									$import->log .= "<br />>>>>>> " . sprintf( __( 'Skipping Product, see Import Report for full explanation. Reason: %s', 'woo_pi' ), $product->failed_reason );
+								else
+									$import->log .= "<br />>>>>>> " . sprintf( __( 'Skipping Product, reason: %s', 'woo_pi' ), $product->failed_reason );
 							}
 						}
 
@@ -475,6 +515,7 @@ if( is_admin() ) {
 					if( ( $import->product_end_time - $import->product_start_time ) > $import->product_max_time )
 						$import->product_max_time = ( $import->product_end_time - $import->product_start_time );
 
+					// All import rows have been processed
 					if( $i+1 == $import->rows ) {
 						if( $import->import_method == 'new' )
 							$import->log .= "<br />" . __( 'Products have been generated', 'woo_pi' );
@@ -489,18 +530,18 @@ if( is_admin() ) {
 
 						// This runs for each additional Product imported
 						$import->active_product = $product;
-						if( $import->import_method == 'new' ) {
-							if( !empty( $product->name ) )
-								$import->log .= "<br />>>> " . sprintf( __( 'Importing %s...', 'woo_pi' ), $product->name );
-							else
-								$import->log .= "<br />>>> " . sprintf( __( 'Importing (no title) - SKU: %s...', 'woo_pi' ), $product->sku );
-							$import->loading_text = sprintf( __( 'Importing Product %1$d of %2$d...', 'woo_pi' ), $i + 1, ( $import->skip_first ? $import->rows - 1 : $import->rows ) );
-						} else if( $import->import_method == 'delete' ) {
+						if( $import->import_method == 'delete' ) {
 							if( !empty( $product->name ) )
 								$import->log .= "<br />>>> " . sprintf( __( 'Searching for %s...', 'woo_pi' ), $product->name );
 							else
 								$import->log .= "<br />>>> " . sprintf( __( 'Searching for (no title) - SKU: %s...', 'woo_pi' ), $product->sku );
-							$import->loading_text = sprintf( __( 'Searching for Product %1$d of %2$d...', 'woo_pi' ), $i + 1, ( $import->skip_first ? $import->rows - 1 : $import->rows ) );
+							$import->loading_text = sprintf( __( 'Searching for Product %d of %d...', 'woo_pi' ), $i + 1, ( $import->skip_first ? $import->rows - 1 : $import->rows ) );
+						} else {
+							if( !empty( $product->name ) )
+								$import->log .= "<br />>>> " . sprintf( __( 'Importing %s...', 'woo_pi' ), $product->name );
+							else
+								$import->log .= "<br />>>> " . sprintf( __( 'Importing (no title) - SKU: %s...', 'woo_pi' ), $product->sku );
+							$import->loading_text = sprintf( __( 'Importing Product %d of %d...', 'woo_pi' ), $i + 1, ( $import->skip_first ? $import->rows - 1 : $import->rows ) );
 						}
 					}
 					break;
@@ -552,22 +593,30 @@ if( is_admin() ) {
 			// Encode our transients in UTF-8 before storing them
 			add_filter( 'pre_set_transient_woo_pi_import', 'woo_pi_filter_set_transient' );
 
-			// Split the CSV data from the main transient
+			// Split the import data from the main transient
 			if( isset( $import->headers ) ) {
 				foreach( $import->headers as $header ) {
 					if( isset( $import->{'csv_' . $header} ) ) {
-						set_transient( WOO_PI_PREFIX . '_csv_' . $header, $import->{'csv_' . $header} );
+						$response = set_transient( WOO_PI_PREFIX . '_csv_' . $header, $import->{'csv_' . $header} );
+						// Check if the Transient was saved
+						if( is_wp_error( $response ) )
+							error_log( sprintf( __( '[product-importer] Could not save the import data Transient for the column %s', 'woo_pi' ), $header ) );
 						unset( $import->{'csv_' . $header} );
 					}
 				}
 			}
-			set_transient( WOO_PI_PREFIX . '_import', $import );
+			$response = set_transient( WOO_PI_PREFIX . '_import', $import );
+			// Check if the Transient was saved
+			if( is_wp_error( $response ) )
+				error_log( '[product-importer] Could not save the import Transient prior to starting AJAX import engine', 'woo_pi' );
 
 			$return = array();
 			if( isset( $import->log ) )
 				$return['log'] = $import->log;
 			if( isset( $import->rows ) )
 				$return['rows'] = $import->rows;
+			if( isset( $import->skip_first ) )
+				$return['skip_first'] = $import->skip_first;
 			if( isset( $import->loading_text ) )
 				$return['loading_text'] = $import->loading_text;
 			if( isset( $import->cancel_import ) )
@@ -666,13 +715,35 @@ if( is_admin() ) {
 
 	}
 
+	// Increase memory for AJAX importer process and Product Importer screens
+	function woo_pi_init_memory() {
+
+		$page = $_SERVER['SCRIPT_NAME'];
+		if( isset( $_POST['action'] ) )
+			$action = $_POST['action'];
+		elseif( isset( $_GET['action'] ) )
+			$action = $_GET['action'];
+		else
+			$action = '';
+
+		$allowed_actions = array( 'product_importer', 'finish_import', 'upload_image' );
+
+		if( $page == '/wp-admin/admin-ajax.php' && in_array( $action, $allowed_actions ) )
+			@ini_set( 'memory_limit', WP_MAX_MEMORY_LIMIT );
+
+	}
+	add_action( 'plugins_loaded', 'woo_pi_init_memory' );
+
 	// Returns the number of columns detected within a CSV file
 	function woo_pi_total_columns() {
 
 		global $import;
 
-		if( $rows = number_format( $import->rows, 0, null, ',' ) ) {
-			$message = sprintf( __( '%s rows have been detected within this import file. Let\'s get started!', 'woo_pi' ), $rows );
+		if( $import->rows ) {
+			if( $import->skip_first )
+				$message = sprintf( __( '%s rows have been detected within this import file, and by the looks of it the first row contains the column headers. Let\'s get started!', 'woo_pi' ), $import->rows );
+			else
+				$message = sprintf( __( '%s rows have been detected within this import file. Let\'s get started!', 'woo_pi' ), $import->rows );
 			woo_pi_admin_notice_html( $message );
 		}
 
@@ -704,24 +775,27 @@ if( is_admin() ) {
  * Since: 1.6.8
  *
  */
-function woo_pi_prepare_data( $step = '' ) {
+function woo_pi_prepare_data( $step = false ) {
 
 	global $import;
 
 	$import->skip_first = false;
 	if( $file = woo_pi_get_option( 'csv' ) ) {
-		$from_encoding = 'ISO-8859-1';
-		$to_encoding = $import->encoding;
 		ini_set( 'auto_detect_line_endings', true );
 		if( @filesize( $file ) > 0 ) {
 			// Skip generating first and second rows for AJAX import engine
-			if( $step != 'prepare_data' ) {
+			if( $step == false ) {
 				if( $handle = @fopen( $file, 'r' ) ) {
 					$import->lines = array();
 					$line = 0;
 					while( ( $buffer = fgets( $handle ) ) !== false ) {
-						if( $line == 0 )
+						// First row of import file
+						if( $line == 0 ) {
+							// Save the first row intact for later import issue detection
+							$import->raw = $buffer;
 							$import->lines[0] = woo_pi_encode_transient( $buffer );
+						}
+						// Second row of import file
 						if( $line == 1 ) {
 							$import->lines[1] = woo_pi_encode_transient( $buffer );
 							break;
@@ -738,16 +812,7 @@ function woo_pi_prepare_data( $step = '' ) {
 					for( $i = 0; $i < $size; $i++ ) {
 						if( !isset( $data[$i] ) || !is_array( $data[$i] ) )
 							$data[$i] = array();
-						if( function_exists( 'mb_convert_encoding' ) && ( $from_encoding <> $to_encoding ) ) {
-							// @mod - Character encoding: Method 1, default, needs some work
-							$csv_data[$i] = mb_convert_encoding( trim( $csv_data[$i] ), $to_encoding, $from_encoding );
-
-							// @mod - Character encoding: Method 2, alternative, needs some work
-							// $csv_data[$i] = iconv( $from_encoding, $to_encoding, mb_convert_encoding( trim( $csv_data[$i] ), 'UTF-8' ) );
-						} else {
-							// Character encoding: Method 3, fallback
-							$csv_data[$i] = trim( $csv_data[$i] );
-						}
+						$csv_data[$i] = woo_pi_encode_transient( trim( $csv_data[$i] ) );
 						array_push( $data[$i], $csv_data[$i] );
 					}
 					unset( $csv_data );
@@ -757,7 +822,7 @@ function woo_pi_prepare_data( $step = '' ) {
 				unset( $csv_data, $data );
 				$import->rows = count( $import->csv_data[0] );
 				if( $import->advanced_log )
-					$import->log .= "<br />" . __( 'Sufficient memory is available...', 'woo_pi' );
+					$import->log .= "<br />" . sprintf( __( 'Sufficient memory is available... %s', 'woo_pi' ), woo_pi_current_memory_usage() );
 			} else {
 				$import->cancel_import = true;
 				$import->failed_import = __( 'Could not read file. Could not open the import file or URL.', 'woo_pi' );
@@ -766,6 +831,7 @@ function woo_pi_prepare_data( $step = '' ) {
 			$import->cancel_import = true;
 			$import->failed_import = __( 'Could not read file. An empty import file was detected.', 'woo_pi' );
 		}
+		ini_set( 'auto_detect_line_endings', false );
 		unset( $handle );
 	} else {
 		$import->cancel_import = true;
@@ -824,7 +890,10 @@ function woo_pi_format_column( $column ) {
 
 	$output = $column;
 	$output = strtolower( $output );
-	$output = str_replace( array( ' ', ' - ' ), '_', $output );
+	// Strip out any confusing characters
+	$output = str_replace( ' - ', '_', $output );
+	$output = str_replace( array( ' ', '-' ), '_', $output );
+	$output = str_replace( array( ':', '(', ')' ), '', $output );
 	return $output;
 
 }
@@ -849,6 +918,7 @@ function woo_pi_format_cell_preview( $output = '', $key = '', $cell = '' ) {
 
 	$matches = array(
 		'image',
+		'product_gallery',
 		'category',
 		'tag'
 	);
@@ -886,10 +956,18 @@ function woo_pi_prepare_columns( $value_data = array() ) {
 	unset( $import->csv_data );
 
 	$import->rows = 0;
-	if( woo_pi_validate_columns( $csv_data ) )
+	if( woo_pi_validate_columns( $csv_data ) ) {
 		$import->cancel_import = true;
-	else
-		$import->log .= "<br />" . __( 'Sufficient data was provided, beginning import...', 'woo_pi' );
+		$import->log .= ' ' . __( 'import file column validation failed', 'woo_pi' );
+		$import->log .= "<br /><br />" . __( 'Import cancelled', 'woo_pi' );
+		unset( $csv_data );
+		return false;
+	} else {
+		$import->log .= ' ' . __( 'sufficient data was provided', 'woo_pi' );
+		$import->log .= "<br />" . __( 'Beginning import...', 'woo_pi' );
+	}
+	if( WOO_PI_DEBUG == true )
+		$import->log .= "<br /><br />*** " . __( 'PID debugging mode is enabled, no record changes will be made till WOO_PI_DEBUG is de-activated from product-importer.php on line #22', 'woo_pi' ) . " ***";
 
 	$import->log .= "<br /><br />" . __( 'Detect and group Product columns...', 'woo_pi' );
 
@@ -938,19 +1016,19 @@ function woo_pi_prepare_columns( $value_data = array() ) {
 		$import->log .= "<br />>>> " . __( 'Sale Price has been detected and grouped', 'woo_pi' );
 	}
 	if( isset( $csv_data['sale_price_dates_from'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Sale Price Dates From has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Sale Price Dates From has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['sale_price_dates_to'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Sale Price Dates To has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Sale Price Dates To has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['permalink'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Permalink has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Permalink has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['type'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Type has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Type has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['featured'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Featured has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Featured has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['weight'] ) ) {
 		$import->log .= "<br />>>> " . __( 'Weight has been detected and grouped', 'woo_pi' );
@@ -971,13 +1049,13 @@ function woo_pi_prepare_columns( $value_data = array() ) {
 		$import->log .= "<br />>>> " . __( 'Length has been detected and grouped', 'woo_pi' );
 	}
 	if( isset( $csv_data['post_date'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Product Date has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Product Date has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['post_modified'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Product Modified has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Product Modified has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['product_gallery'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Product Gallery has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Product Gallery has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['category'] ) ) {
 		$import->headers[] = 'category';
@@ -990,16 +1068,16 @@ function woo_pi_prepare_columns( $value_data = array() ) {
 		$import->log .= "<br />>>> " . __( 'Tag has been detected and grouped', 'woo_pi' );
 	}
 	if( isset( $csv_data['shipping_class'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Shipping Class has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Shipping Class has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['tax_status'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Tax Status has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Tax Status has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['tax_class'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Tax Class has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Tax Class has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['stock_status'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Stock Status has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Stock Status has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['quantity'] ) ) {
 		$import->headers[] = 'quantity';
@@ -1007,19 +1085,19 @@ function woo_pi_prepare_columns( $value_data = array() ) {
 		$import->log .= "<br />>>> " . __( 'Quantity has been detected and grouped', 'woo_pi' );
 	}
 	if( isset( $csv_data['allow_backorders'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Allow Backorders has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Allow Backorders has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['sold_individually'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Sold Individually has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Sold Individually has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['upsells'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Up-Sells has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Up-Sells has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['crosssells'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Cross-Sells has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Cross-Sells has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['image'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Featured Image has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Featured Image has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['sort'] ) ) {
 		$import->headers[] = 'sort';
@@ -1027,19 +1105,19 @@ function woo_pi_prepare_columns( $value_data = array() ) {
 		$import->log .= "<br />>>> " . __( 'Sort Order has been detected and grouped', 'woo_pi' );
 	}
 	if( isset( $csv_data['file_download'] ) ) {
-		$import->log .= "<br />>>> " . __( 'File Download has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'File Download has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['download_limit'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Download Limit has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Download Limit has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['product_url'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Product URL has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Product URL has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['button_text'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Button Text has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Button Text has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['visibility'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Visibility has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Visibility has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['status'] ) ) {
 		$import->headers[] = 'status';
@@ -1052,121 +1130,121 @@ function woo_pi_prepare_columns( $value_data = array() ) {
 		$import->log .= "<br />>>> " . __( 'Enable Reviews has been detected and grouped', 'woo_pi' );
 	}
 	if( isset( $csv_data['purchase_note'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Purchase Note has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Purchase Note has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 
 
 	// All in One SEO Pack integration
 	if( isset( $csv_data['aioseop_keywords'] ) ) {
-		$import->log .= "<br />>>> " . __( 'All in One SEO Pack - Keywords has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'All in One SEO Pack - Keywords has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['aioseop_description'] ) ) {
-		$import->log .= "<br />>>> " . __( 'All in One SEO Pack - Description has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'All in One SEO Pack - Description has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['aioseop_title'] ) ) {
-		$import->log .= "<br />>>> " . __( 'All in One SEO Pack - Title has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'All in One SEO Pack - Title has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['aioseop_titleatr'] ) ) {
-		$import->log .= "<br />>>> " . __( 'All in One SEO Pack - Title Attributes has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'All in One SEO Pack - Title Attributes has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['aioseop_menulabel'] ) ) {
-		$import->log .= "<br />>>> " . __( 'All in One SEO Pack - Menu Label has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'All in One SEO Pack - Menu Label has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 
 	// Advanced Google Product Feed integration
 	if( isset( $csv_data['gpf_availability'] ) ) {
-		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Availability has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Availability has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['gpf_condition'] ) ) {
-		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Condition has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Condition has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['gpf_brand'] ) ) {
-		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Brand has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Brand has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['gpf_product_type'] ) ) {
-		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Product Type has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Product Type has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['gpf_google_product_category'] ) ) {
-		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Google Product Category has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Google Product Category has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['gpf_gtin'] ) ) {
-		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Global Trade Item Number (GTIN) has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Global Trade Item Number (GTIN) has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['gpf_mpn'] ) ) {
-		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Manufacturer Part Number (MPN) has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Manufacturer Part Number (MPN) has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['gpf_gender'] ) ) {
-		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Gender has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Gender has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['gpf_age_group'] ) ) {
-		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Age Group has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Age Group has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['gpf_color'] ) ) {
-		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Colour has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Colour has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['gpf_size'] ) ) {
-		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Size has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>>" . __( 'Advanced Google Product Feed - Size has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 
 	// SEO Ultimate
 	if( isset( $csv_data['useo_meta_title'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Ultimate SEO - Meta Title has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Ultimate SEO - Meta Title has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['useo_meta_description'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Ultimate SEO - Meta Description has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Ultimate SEO - Meta Description has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['useo_meta_keywords'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Ultimate SEO - Meta Keywords has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Ultimate SEO - Meta Keywords has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['useo_social_title'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Ultimate SEO - Social Title has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Ultimate SEO - Social Title has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['useo_social_description'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Ultimate SEO - Social Description has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Ultimate SEO - Social Description has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['useo_meta_noindex'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Ultimate SEO - noindex has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Ultimate SEO - noindex has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['useo_meta_noautolinks'] ) ) {
-		$import->log .= "<br />>>> " . __( 'Ultimate SEO - Disable Autolinks has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'Ultimate SEO - Disable Autolinks has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 
 	// WordPress SEO
 	if( isset( $csv_data['wpseo_focuskw'] ) ) {
-		$import->log .= "<br />>>> " . __( 'WordPress SEO - Focus Keyword has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'WordPress SEO - Focus Keyword has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['wpseo_metadesc'] ) ) {
-		$import->log .= "<br />>>> " . __( 'WordPress SEO - Meta Description has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'WordPress SEO - Meta Description has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['wpseo_title'] ) ) {
-		$import->log .= "<br />>>> " . __( 'WordPress SEO - SEO Title has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'WordPress SEO - SEO Title has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['wpseo_googleplus_description'] ) ) {
-		$import->log .= "<br />>>> " . __( 'WordPress SEO - Google+ Description has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'WordPress SEO - Google+ Description has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['wpseo_opengraph_description'] ) ) {
-		$import->log .= "<br />>>> " . __( 'WordPress SEO - Facebook Description has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'WordPress SEO - Facebook Description has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['wpseo_meta_robots_noindex'] ) ) {
-		$import->log .= "<br />>>> " . __( 'WordPress SEO - Meta Robots Index has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'WordPress SEO - Meta Robots Index has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['wpseo_meta_robots_nofollow'] ) ) {
-		$import->log .= "<br />>>> " . __( 'WordPress SEO - Meta Robots Follow has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'WordPress SEO - Meta Robots Follow has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['wpseo_meta_robots_adv'] ) ) {
-		$import->log .= "<br />>>> " . __( 'WordPress SEO - Meta Robots Advanced has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'WordPress SEO - Meta Robots Advanced has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['wpseo_sitemap_html_include'] ) ) {
-		$import->log .= "<br />>>> " . __( 'WordPress SEO - Include in HTML Sitemap Advanced has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'WordPress SEO - Include in HTML Sitemap Advanced has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['wpseo_authorship'] ) ) {
-		$import->log .= "<br />>>> " . __( 'WordPress SEO - Authorship has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'WordPress SEO - Authorship has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['wpseo_canonical'] ) ) {
-		$import->log .= "<br />>>> " . __( 'WordPress SEO - Canonical URL has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'WordPress SEO - Canonical URL has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 	if( isset( $csv_data['wpseo_redirect'] ) ) {
-		$import->log .= "<br />>>> " . __( 'WordPress SEO - 301 Redirect has been detected, upgrade to Pro to import this field', 'woo_pd' );
+		$import->log .= "<br />>>> " . __( 'WordPress SEO - 301 Redirect has been detected, upgrade to Pro to import this field', 'woo_pi' );
 	}
 }
 
@@ -1204,11 +1282,13 @@ function woo_pi_validate_columns( $csv_data = array() ) {
 				$failed_reason[] = __( 'You must provide a list of SKU\'s to delete matching Products, hit Return to options screen to assign this column', 'woo_pi' );
 		}
 		if( empty( $failed_reason ) )
-			$failed_reason[] = __( 'No specific reason was given for why the provided columns could not be validated, please raise this as a Premium Support issue with our team :)', 'woo_pi' );
+			$failed_reason[] = __( 'No specific reason was given for why the provided columns from this import file could not be validated, please raise this as a Premium Support issue with our team :)', 'woo_pi' );
 		$size = ( count( $failed_reason ) - 1 );
 		for( $i = 0; $i <= $size; $i++ ) {
-			if( $failed_reason[$i] )
-				$import->failed_import = $failed_reason[$i];
+			if( $failed_reason[$i] ) {
+				$import->loading_text = __( 'Import validation failed', 'woo_pi' );
+				$import->failed_import = sprintf( __( 'Import validation issue: %s', 'woo_pi' ), $failed_reason[$i] );
+			}
 		}
 		return true;
 	}
@@ -1220,7 +1300,9 @@ function woo_pi_upload_directories() {
 	global $import;
 
 	$upload_dir = wp_upload_dir();
-	$import->uploads_directory = sprintf( '%s/', $upload_dir['path'] );
+	$import->uploads_path = sprintf( '%s/', $upload_dir['path'] );
+	$import->uploads_basedir = sprintf( '%s/', $upload_dir['basedir'] );
+	$import->uploads_subdir = $upload_dir['subdir'];
 	$import->uploads_url = sprintf( '%s/', $upload_dir['baseurl'] );
 	$import->date_directory = ( get_option( 'uploads_use_yearmonth_folders', 0 ) ? date( 'Y/m/', strtotime( current_time( 'mysql' ) ) ) : false );
 
@@ -1286,6 +1368,30 @@ function woo_pi_delete_file() {
 
 	}
 	woo_pi_update_option( 'csv', '' );
+
+}
+
+// Returns the current memory usage at that moment
+function woo_pi_current_memory_usage( $echo = false ) {
+
+	$output = sprintf( '%d Mb / %d Mb', round( memory_get_usage( true ) / 1024 / 1024, 2 ), (int)ini_get( 'memory_limit' ) );
+	if( $echo )
+		echo $output;
+	else
+		return $output;
+
+}
+function woo_pi_strposa( $haystack, $needles = array(), $offset = 0 ) {
+
+	$chr = array();
+	foreach( $needles as $needle ) {
+		$res = strpos( $haystack, $needle, $offset );
+		if( $res !== false )
+			$chr[$needle] = $res;
+	}
+	if( empty( $chr ) )
+		return false;
+	return min( $chr );
 
 }
 

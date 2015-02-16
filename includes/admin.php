@@ -15,8 +15,10 @@ function woo_pi_admin_notice( $message = '', $priority = 'updated', $screen = ''
 			$existing_notice = base64_decode( $existing_notice );
 			$output = $existing_notice . $output;
 		}
-		set_transient( WOO_PI_PREFIX . '_notice', base64_encode( $output ), MINUTE_IN_SECONDS );
-		add_action( 'admin_notices', 'woo_pi_admin_notice_print' );
+		$response = set_transient( WOO_PI_PREFIX . '_notice', base64_encode( $output ), MINUTE_IN_SECONDS );
+		// Check if the Transient was saved
+		if( $response !== false )
+			add_action( 'admin_notices', 'woo_pi_admin_notice_print' );
 	}
 
 }

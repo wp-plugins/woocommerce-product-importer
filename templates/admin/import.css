@@ -16,6 +16,12 @@
 #woo-pi .text-align-right {
 	text-align:right;
 }
+#woo-pi .vertical-align-top {
+	vertical-align:top;
+}
+#woo-pi .vertical-align-middle {
+	vertical-align:middle;
+}
 #woo-pi code {
 	margin:0;
 	padding:0;
@@ -89,6 +95,9 @@
 }
 #woo-pi table.widefat th.column-equals {
 	width:50px;
+}
+#woo-pi div.woo_pi_page_options fieldset {
+	margin-top:0.5em;
 }
 
 /* Save */
@@ -302,6 +311,10 @@
 }
 .ui-progress-bar .ui-progress span.ui-label b {
 	font-weight: bold;
+}
+.ui-progress-bar.red .ui-progress span.ui-label {
+	color:#fff;
+	text-shadow: rgba(0, 0, 0, 1) 0 1px 0px;
 }
 .ui-progress-bar .ui-progress span.ui-label.outer {
 	text-shadow: rgba(0, 0, 0, 0.45) 0 1px 0px;

@@ -1,4 +1,5 @@
 var $j = jQuery.noConflict();
+
 $j(function() {
 
 	$j('#skip_overview').click(function(){
@@ -27,6 +28,11 @@ $j(function() {
 				break;
 
 		}
+	});
+
+	// Unselect all field options for this export type
+	$j('.unselectall').click(function () {
+		$j(this).closest('.widefat').find('option:selected').attr('selected', false);
 	});
 
 	$j(document).ready(function() {
